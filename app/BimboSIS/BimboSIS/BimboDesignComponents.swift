@@ -8,6 +8,15 @@ enum BimboLayout {
     static let heroHorizontalPadding: CGFloat = 20
     static let heroTopPadding: CGFloat = 52
     static let titleSize: CGFloat = 36
+
+    // MARK: Solo cabecera **Mi Ruta** (compacta, logo grande)
+    /// Menos altura navy = menos espacio vacío debajo de la fila título / logo.
+    static let routeHeroNavyHeight: CGFloat = 168
+    static let routeHeroTopPadding: CGFloat = 48
+    /// Título y subtítulo muy juntos, como en la maqueta.
+    static let routeHeroTitleSubtitleSpacing: CGFloat = 2
+    /// Distancia entre la fila de texto y la tarjeta del mapa.
+    static let routeHeroRowToMapSpacing: CGFloat = 12
 }
 
 /// Cabecera hero navy como la primera pantalla (título grande rounded + subtítulo + trailing).

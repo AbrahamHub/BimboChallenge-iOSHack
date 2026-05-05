@@ -33,7 +33,6 @@ struct StopDetailView: View {
     @State private var showCamera = false
     @State private var capturedImage: UIImage?
     @State private var showImagePreview = false
-    @State private var showStock = false
     @Environment(\.dismiss) private var dismiss
     @State private var showRotateSheet = false
     /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
@@ -60,48 +59,6 @@ struct StopDetailView: View {
                         ProductRow(product: product)
                     }
 
-                    primaryActionButton(
-                        title: "Productos rotados (4)",
-                        icon: "arrow.2.circlepath",
-                        background: Color(red: 92 / 255, green: 106 / 255, blue: 171 / 255),
-                        foreground: .white
-                    ) {
-                        showStock = true
-                    }
-                    .sheet(isPresented: $showStock) {
-                        StockView()
-                    }
-
-                    primaryActionButton(
-                        title: "Entrega confirmada",
-                        icon: "checkmark",
-                        background: .white,
-                        foreground: Color(red: 63 / 255, green: 71 / 255, blue: 89 / 255)
-                    ) {
-                        onComplete?()
-                        dismiss()
-                    }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.gray.opacity(0.12), lineWidth: 1)
-                    )
-
-                    primaryActionButton(
-                        title: "Escanear anaquel",
-                        icon: "camera.viewfinder",
-                        trailingIcon: "chevron.right",
-                        background: Color(red: 3 / 255, green: 24 / 255, blue: 80 / 255),
-                        foreground: .white
-                    ) {
-                        showCamera = true
-                    }
-                    .fullScreenCover(isPresented: $showCamera) {
-                        ShelfScannerView { image in
-                            capturedImage = image
-                            showImagePreview = true
-                            showCamera = false
-                        }
-                    }
                     actionButtonsBlock
 
                     if showImagePreview, let img = capturedImage {
@@ -118,6 +75,11 @@ struct StopDetailView: View {
         .background(AppPalette.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .onChange(of: connectivity.isOffline) { _, offline in
+            if offline {
+                showCamera = false
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) {
             ShelfScannerView { image in
                 capturedImage = image
@@ -217,7 +179,8 @@ struct StopDetailView: View {
                 foreground: AppPalette.mutedButtonForeground,
                 trailingIcon: nil
             ) {
-                // TODO: Confirmar entrega y actualizar estado/stock.
+                onComplete?()
+                dismiss()
             }
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)

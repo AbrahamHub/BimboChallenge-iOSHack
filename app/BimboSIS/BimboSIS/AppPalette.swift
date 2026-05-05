@@ -25,16 +25,20 @@ enum AppPalette {
 }
 
 struct BrandLogoButton: View {
+    /// Tamaño del cuadrado blanco (la referencia de **Mi Ruta** usa ~64 pt).
+    var size: CGFloat = 48
     var action: () -> Void
+
+    private var cornerRadius: CGFloat { size * (14.0 / 48.0) }
 
     var body: some View {
         Button(action: action) {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(.white)
-                .frame(width: 48, height: 48)
+                .frame(width: size, height: size)
                 .overlay {
                     Text("B")
-                        .font(.title3.weight(.heavy))
+                        .font(.system(size: size * 0.48, weight: .heavy, design: .rounded))
                         .foregroundStyle(AppPalette.brandRed)
                 }
         }
@@ -67,6 +71,7 @@ private struct OfflineIndicatorBadge: View {
 /// Logo de marca con indicador offline encima cuando no hay red.
 struct BrandLogoToolbarCluster: View {
     @EnvironmentObject private var connectivity: ConnectivityViewModel
+    var logoSize: CGFloat = 48
     var signOutAction: () -> Void
 
     var body: some View {
@@ -74,7 +79,7 @@ struct BrandLogoToolbarCluster: View {
             if connectivity.isOffline {
                 OfflineIndicatorBadge()
             }
-            BrandLogoButton(action: signOutAction)
+            BrandLogoButton(size: logoSize, action: signOutAction)
         }
     }
 }
