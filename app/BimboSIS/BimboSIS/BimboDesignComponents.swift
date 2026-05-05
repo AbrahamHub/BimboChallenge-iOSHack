@@ -102,6 +102,8 @@ struct BimboStepperProductCard: View {
     var useIconPlaceholder: Bool = false
     /// Por SKU demo (`BimboDemoProductSymbol`); si es `nil` y no hay placeholder, se usa `photo`.
     var systemImage: String? = nil
+    /// Nombre de la imagen en Assets.
+    var assetName: String? = nil
 
     private var canIncrement: Bool { quantity < maxQuantity }
     private var canDecrement: Bool { quantity > 0 }
@@ -124,10 +126,17 @@ struct BimboStepperProductCard: View {
                         .background(Color.white)
                         .frame(width: 52, height: 52)
                         .overlay {
-                            Image(systemName: systemImage ?? "photo")
-                                .font(.title3)
-                                .symbolRenderingMode(.hierarchical)
-                                .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                            if let assetName {
+                                Image(assetName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .padding(4)
+                            } else {
+                                Image(systemName: systemImage ?? "photo")
+                                    .font(.title3)
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                            }
                         }
                 }
             }

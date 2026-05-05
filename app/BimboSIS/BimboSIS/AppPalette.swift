@@ -79,9 +79,24 @@ struct BrandLogoToolbarCluster: View {
     }
 }
 
-/// SF Symbols por SKU demo (pan, integral, donas, etc.) para listas de stock / rotación / confirmación.
+/// Íconos (Assets) y SF Symbols por SKU demo para listas de stock / rotación / confirmación.
 enum BimboDemoProductSymbol {
-    /// Nombres **SF Symbols** estables (iOS 15+) para que el ícono siempre resuelva en runtime.
+    /// Nombres de **Assets** en `Iconos/`
+    static func assetName(forSKU sku: String) -> String? {
+        switch sku {
+        case "SKU BIM-001": return "pan_blanco"
+        case "SKU BIM-002": return "pan_cero"
+        case "SKU BIM-003": return "bimbollos"
+        case "SKU BIM-004": return "nito"
+        case "SKU BIM-005": return "donas_azucaradas"
+        case "SKU BIM-006": return "mantecadas_vainilla"
+        case "SKU BIM-007": return "rebanadas"
+        case "SKU BIM-008": return "pinguino"
+        default: return nil
+        }
+    }
+
+    /// Nombres **SF Symbols** de respaldo
     static func systemImage(forSKU sku: String) -> String {
         switch sku {
         case "SKU BIM-001": return "bag.fill"

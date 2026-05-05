@@ -15,6 +15,8 @@ struct Product: Identifiable {
     let semaphore: DeliverySemaphoreBadge
     /// SF Symbol alineado al SKU demo (`BimboDemoProductSymbol`).
     let systemImage: String
+    /// Nombre de la imagen en Assets.
+    let assetName: String?
 }
 
 struct StopDetailView: View {
@@ -25,9 +27,9 @@ struct StopDetailView: View {
     @EnvironmentObject private var connectivity: ConnectivityViewModel
 
     private let products: [Product] = [
-        Product(name: "Pan Blanco Grande", qty: 12, semaphore: .critical, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-001")),
-        Product(name: "Pan Integral", qty: 8, semaphore: .warning, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-002")),
-        Product(name: "Bimbollos", qty: 6, semaphore: .ok, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-003"))
+        Product(name: "Pan Blanco Grande", qty: 12, semaphore: .critical, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-001"), assetName: BimboDemoProductSymbol.assetName(forSKU: "SKU BIM-001")),
+        Product(name: "Pan Integral", qty: 8, semaphore: .warning, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-002"), assetName: BimboDemoProductSymbol.assetName(forSKU: "SKU BIM-002")),
+        Product(name: "Bimbollos", qty: 6, semaphore: .ok, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-003"), assetName: BimboDemoProductSymbol.assetName(forSKU: "SKU BIM-003"))
     ]
 
     @State private var showCamera = false
@@ -381,10 +383,17 @@ private struct ProductRow: View {
                 .background(Color.white)
                 .frame(width: 48, height: 48)
                 .overlay {
-                    Image(systemName: product.systemImage)
-                        .font(.title3)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                    if let assetName = product.assetName {
+                        Image(assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .padding(4)
+                    } else {
+                        Image(systemName: product.systemImage)
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                    }
                 }
 
             VStack(alignment: .leading, spacing: 4) {

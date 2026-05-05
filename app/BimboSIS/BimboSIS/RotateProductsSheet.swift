@@ -292,10 +292,17 @@ private struct RotateProductRow: View {
                 .background(Color.white)
                 .frame(width: 52, height: 52)
                 .overlay {
-                    Image(systemName: systemImage)
-                        .font(.title3)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                    if let assetName = BimboDemoProductSymbol.assetName(forSKU: sku) {
+                        Image(assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .padding(4)
+                    } else {
+                        Image(systemName: systemImage)
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                    }
                 }
 
             VStack(alignment: .leading, spacing: 4) {

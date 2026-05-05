@@ -115,7 +115,8 @@ struct ConfirmarOrdenView: View {
                             quantity: $line.quantity,
                             maxQuantity: line.maxQuantity,
                             useIconPlaceholder: false,
-                            systemImage: BimboDemoProductSymbol.systemImage(forSKU: line.sku)
+                            systemImage: BimboDemoProductSymbol.systemImage(forSKU: line.sku),
+                            assetName: BimboDemoProductSymbol.assetName(forSKU: line.sku)
                         )
                     }
                 }

@@ -108,10 +108,17 @@ private struct StockProductRow: View {
                 .background(Color.white)
                 .frame(width: 52, height: 52)
                 .overlay {
-                    Image(systemName: symbolName)
-                        .font(.title3)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                    if let assetName = BimboDemoProductSymbol.assetName(forSKU: item.sku) {
+                        Image(assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .padding(4)
+                    } else {
+                        Image(systemName: symbolName)
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                    }
                 }
 
             VStack(alignment: .leading, spacing: 3) {
