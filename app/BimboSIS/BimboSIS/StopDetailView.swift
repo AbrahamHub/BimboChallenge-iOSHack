@@ -35,7 +35,6 @@ struct StopDetailView: View {
     @State private var showCamera = false
     @State private var capturedImage: UIImage?
     @State private var showImagePreview = false
-    @State private var showStock = false
     @Environment(\.dismiss) private var dismiss
     @State private var showRotateSheet = false
     @State private var showConfirmOrder = false
@@ -80,6 +79,11 @@ struct StopDetailView: View {
         .background(AppPalette.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .onChange(of: connectivity.isOffline) { _, offline in
+            if offline {
+                showCamera = false
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) {
             ShelfScannerView { image in
                 capturedImage = image
@@ -207,7 +211,8 @@ struct StopDetailView: View {
                 foreground: AppPalette.mutedButtonForeground,
                 trailingIcon: nil
             ) {
-                // TODO: Confirmar entrega y actualizar estado/stock.
+                onComplete?()
+                dismiss()
             }
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)

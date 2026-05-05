@@ -47,6 +47,11 @@ struct ShelfScannerView: View {
                 dismiss()
             }
         }
+        .onChange(of: connectivity.isOffline) { _, offline in
+            if offline {
+                dismiss()
+            }
+        }
         .onDisappear {
             camera.stopSession()
         }

@@ -1,7 +1,8 @@
 import SwiftUI
 import MapKit
 
-struct Client: Identifiable, Equatable {
+struct Client: Identifiable, Equatable 
+{
     let id = UUID()
     let name: String
     let address: String
@@ -53,47 +54,52 @@ struct MainRouteView: View {
     var header: some View {
         ZStack(alignment: .bottom) {
             AppPalette.navy
-                .frame(height: BimboLayout.heroHeaderHeight)
+                .frame(height: BimboLayout.routeHeroNavyHeight)
                 .clipShape(RoundedRectangle(cornerRadius: BimboLayout.heroCornerRadius, style: .continuous))
                 .ignoresSafeArea(edges: .top)
 
-            VStack(spacing: 22) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+            VStack(spacing: BimboLayout.routeHeroRowToMapSpacing) {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: BimboLayout.routeHeroTitleSubtitleSpacing) {
                         Text("Mi Ruta")
                             .font(.system(size: BimboLayout.titleSize, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
 
                         Text(routeStatusSubtitle)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.88)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
-                    BrandLogoToolbarCluster { authVM.signOut() }
+                    BrandLogoToolbarCluster(logoSize: 64) { authVM.signOut() }
                 }
 
                 RoutePreviewCard(coordinates: simulatedCoordinates)
                     .padding(.bottom, -52)
             }
             .padding(.horizontal, BimboLayout.heroHorizontalPadding)
-            .padding(.top, BimboLayout.heroTopPadding)
+            .padding(.top, BimboLayout.routeHeroTopPadding)
+            .padding(.bottom, 2)
         }
     }
 
     var clientsSection: some View {
         VStack(spacing: 12) {
             ForEach(clients) { client in
-                if client.status == .complete {
-                    ClientStopRow(client: client)
-                } else {
-                    NavigationLink {
-                        StopDetailView(client: client, onComplete: {
-                            completeClient(client)
-                        })
-                    } label: {
+                Group {
+                    if client.status == .complete {
                         ClientStopRow(client: client)
+                    } else {
+                        NavigationLink {
+                            StopDetailView(client: client, onComplete: {
+                                completeClient(client)
+                            })
+                        } label: {
+                            ClientStopRow(client: client)
+                        }
                     }
                 }
             }
