@@ -35,6 +35,8 @@ struct StopDetailView: View {
     @State private var showImagePreview = false
     @Environment(\.dismiss) private var dismiss
     @State private var showRotateSheet = false
+    @State private var showConfirmOrder = false
+    @State private var isAnalyzing = false
     /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
     @State private var confirmedRotationPieces = 0
     /// Último estado del modal para que al reabrir sigan cuadrando las cantidades.
@@ -92,6 +94,34 @@ struct StopDetailView: View {
             RotateProductsSheet(initialLines: rotationDraftLines) { result in
                 rotationDraftLines = result
                 confirmedRotationPieces = result.reduce(into: 0) { $0 += $1.rotatingQty }
+            }
+        }
+        .navigationDestination(isPresented: $showConfirmOrder) {
+            ConfirmarOrdenView(
+                storeName: client.name,
+                lines: ConfirmarOrdenView.previewDemoLines
+            )
+        }
+        .overlay {
+            if isAnalyzing {
+                analysisOverlay
+            }
+        }
+    }
+
+    private var analysisOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(.white)
+                
+                Text("Analizando anaquel con IA...")
+                    .font(.headline)
+                    .foregroundStyle(.white)
             }
         }
     }
