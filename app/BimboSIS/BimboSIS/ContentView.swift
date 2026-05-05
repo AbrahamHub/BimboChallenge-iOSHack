@@ -49,12 +49,10 @@ struct BottomTabView: View {
                     Label("Stock", systemImage: "cube.box")
                 }
 
-            VStack {
-                Text("Historial")
-            }
-            .tabItem {
-                Label("Historial", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
-            }
+            HistorialView()
+                .tabItem {
+                    Label("Historial", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                }
         }
         .tint(Color(red: 226/255, green: 27/255, blue: 26/255))
     }
