@@ -65,29 +65,8 @@ struct HistorialView: View {
     }
 
     private var header: some View {
-        ZStack(alignment: .topTrailing) {
-            AppPalette.navy
-                .frame(height: 168)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .ignoresSafeArea(edges: .top)
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Historial")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-
-                    Text("Pedidos anteriores")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.88))
-                }
-
-                Spacer()
-
-                BrandLogoButton { authVM.signOut() }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 52)
+        ScreenHeroHeader(title: "Historial", subtitle: "Pedidos anteriores") {
+            BrandLogoButton { authVM.signOut() }
         }
     }
 

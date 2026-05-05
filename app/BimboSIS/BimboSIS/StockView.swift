@@ -47,47 +47,14 @@ struct StockView: View {
     }
 
     private var header: some View {
-        ZStack(alignment: .topTrailing) {
-            AppPalette.navy
-                .frame(height: 168)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .ignoresSafeArea(edges: .top)
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Stock")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-
-                    Text("Inventario disponible en camión")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.88))
-                }
-
-                Spacer()
-
-                BrandLogoButton { authVM.signOut() }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 52)
+        ScreenHeroHeader(title: "Stock", subtitle: "Inventario disponible en camión") {
+            BrandLogoButton { authVM.signOut() }
         }
     }
 
     private var searchAndSummary: some View {
         VStack(spacing: 14) {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                TextField("Buscar producto o SKU", text: $searchText)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            BimboSearchField(text: $searchText)
 
             HStack {
                 Text("\(filteredItems.count) PRODUCTOS")

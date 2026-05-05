@@ -1,5 +1,28 @@
 import SwiftUI
 
+private enum MainTab: Hashable, CaseIterable {
+    case route
+    case stock
+    case historial
+
+    var title: String {
+        switch self {
+        case .route: return "Ruta"
+        case .stock: return "Stock"
+        case .historial: return "Historial"
+        }
+    }
+
+    /// SF Symbols recomendados por Apple para inventario, mapa y historial.
+    var systemImage: String {
+        switch self {
+        case .route: return "map.fill"
+        case .stock: return "shippingbox.fill"
+        case .historial: return "clock.arrow.circlepath"
+        }
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var auth: AuthViewModel
 
@@ -10,6 +33,7 @@ struct ContentView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.white)
+                            .symbolRenderingMode(.hierarchical)
 
                         Text(message)
                             .font(.subheadline.weight(.semibold))
@@ -37,24 +61,62 @@ struct ContentView: View {
 }
 
 struct BottomTabView: View {
+    @State private var tab: MainTab = .route
+
     var body: some View {
-        TabView {
-            MainRouteView()
-                .tabItem {
-                    Label("Ruta", systemImage: "mappin")
-                }
-
-            StockView()
-                .tabItem {
-                    Label("Stock", systemImage: "cube.box")
-                }
-
-            HistorialView()
-                .tabItem {
-                    Label("Historial", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
-                }
+        Group {
+            switch tab {
+            case .route:
+                MainRouteView()
+            case .stock:
+                StockView()
+            case .historial:
+                HistorialView()
+            }
         }
-        .tint(Color(red: 226/255, green: 27/255, blue: 26/255))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            MainTabBar(selection: $tab)
+        }
+        .tint(AppPalette.brandRed)
+    }
+}
+
+private struct MainTabBar: View {
+    @Binding var selection: MainTab
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.gray.opacity(0.18))
+                .frame(height: 1)
+
+            HStack(spacing: 0) {
+                ForEach(MainTab.allCases, id: \.self) { tab in
+                    Button {
+                        selection = tab
+                    } label: {
+                        VStack(spacing: 6) {
+                            Image(systemName: tab.systemImage)
+                                .font(.system(size: 26, weight: .semibold))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(selection == tab ? AppPalette.brandRed : Color.secondary)
+
+                            Text(tab.title)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(selection == tab ? AppPalette.brandRed : Color.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(tab.title))
+                }
+            }
+            .background(Color.white)
+        }
+        .accessibilityElement(children: .contain)
     }
 }
 

@@ -32,7 +32,6 @@ struct MainRouteView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         header
-                        RoutePreviewCard(coordinates: simulatedCoordinates)
                         clientsSection
                     }
                 }
@@ -52,15 +51,15 @@ struct MainRouteView: View {
     var header: some View {
         ZStack(alignment: .bottom) {
             AppPalette.navy
-                .frame(height: 190)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .frame(height: BimboLayout.heroHeaderHeight)
+                .clipShape(RoundedRectangle(cornerRadius: BimboLayout.heroCornerRadius, style: .continuous))
                 .ignoresSafeArea(edges: .top)
 
             VStack(spacing: 22) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Mi Ruta")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .font(.system(size: BimboLayout.titleSize, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
 
                         Text("Martes, 5 mayo · 1 atendida · 5 pendientes")
@@ -76,8 +75,8 @@ struct MainRouteView: View {
                 RoutePreviewCard(coordinates: simulatedCoordinates)
                     .padding(.bottom, -52)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 52)
+            .padding(.horizontal, BimboLayout.heroHorizontalPadding)
+            .padding(.top, BimboLayout.heroTopPadding)
         }
     }
 
