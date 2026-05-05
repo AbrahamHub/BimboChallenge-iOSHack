@@ -38,14 +38,18 @@ struct StopDetailView: View {
                         icon: "arrow.2.circlepath",
                         background: Color(red: 92 / 255, green: 106 / 255, blue: 171 / 255),
                         foreground: .white
-                    ) {}
+                    ) {
+                        // TODO: Navegar al detalle de productos rotados.
+                    }
 
                     primaryActionButton(
                         title: "Entrega confirmada",
                         icon: "checkmark",
                         background: .white,
                         foreground: Color(red: 63 / 255, green: 71 / 255, blue: 89 / 255)
-                    ) {}
+                    ) {
+                        // TODO: Confirmar entrega y actualizar estado/stock.
+                    }
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .stroke(Color.gray.opacity(0.12), lineWidth: 1)
@@ -60,12 +64,10 @@ struct StopDetailView: View {
                     ) {
                         showCamera = true
                     }
-                    .sheet(isPresented: $showCamera) {
-                        ImagePicker(sourceType: .camera) { image in
-                            if let img = image {
-                                capturedImage = img
-                                showImagePreview = true
-                            }
+                    .fullScreenCover(isPresented: $showCamera) {
+                        ShelfScannerView { image in
+                            capturedImage = image
+                            showImagePreview = true
                             showCamera = false
                         }
                     }
@@ -269,43 +271,3 @@ private struct ProductRow: View {
     }
 }
 
-// Simple ImagePicker using UIImagePickerController
-struct ImagePicker: UIViewControllerRepresentable {
-    enum PickerSourceType {
-        case camera, photoLibrary
-    }
-
-    var sourceType: UIImagePickerController.SourceType = .photoLibrary
-    var completion: (UIImage?) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = sourceType
-        picker.cameraCaptureMode = .photo
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let parent: ImagePicker
-
-        init(_ parent: ImagePicker) {
-            self.parent = parent
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.completion(nil)
-        }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            let img = info[.originalImage] as? UIImage
-            parent.completion(img)
-        }
-    }
-}

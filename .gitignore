@@ -4,7 +4,8 @@ Model/grupo-bimbo-inventory-demand/*.csv
 # Ignorar archivos derivados y temporales de Xcode
 */DerivedData/
 *.xcuserstate
-*.xcworkspace
+# No ignorar "*.xcworkspace" globalmente: oculta también `*.xcodeproj/project.xcworkspace`
+# (workspace embebido que Xcode usa para Swift Packages y puede estabilizar el PIF).
 *.xcuserdata/
 
 # CocoaPods / Carthage / SPM artifacts
