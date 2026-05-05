@@ -3,6 +3,7 @@ import AVFoundation
 
 struct ShelfScannerView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var connectivity: ConnectivityViewModel
     @StateObject private var camera = ShelfCameraModel()
     @State private var tutorialStep = 0
     @State private var showTutorial = true
@@ -34,8 +35,17 @@ struct ShelfScannerView: View {
             }
         }
         .task {
+            guard !connectivity.isOffline else {
+                dismiss()
+                return
+            }
             camera.configureSession()
             camera.startSession()
+        }
+        .onAppear {
+            if connectivity.isOffline {
+                dismiss()
+            }
         }
         .onDisappear {
             camera.stopSession()

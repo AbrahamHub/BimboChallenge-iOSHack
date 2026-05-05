@@ -19,12 +19,14 @@ enum ClientStatus: String, Equatable {
 struct MainRouteView: View {
     @State private var clients: [Client] = [
         Client(name: "Tienda La Esquina", address: "Calle 5 de Mayo 89", pieces: 32, status: .next, isSuggestedRotation: true),
-        Client(name: "Abarrotes Don Chuy", address: "Av. Reforma 234, Col. Centro", pieces: 48, status: .pending, isSuggestedRotation: false),
-        Client(name: "Mini Súper Lupita", address: "Insurgentes Sur 1102", pieces: 76, status: .pending, isSuggestedRotation: false)
+        Client(name: "Abarrotes El Sol", address: "Calz. de Tlalpan 567", pieces: 54, status: .pending, isSuggestedRotation: false),
+        Client(name: "Mini Súper Lupita", address: "Insurgentes Sur 1102", pieces: 76, status: .pending, isSuggestedRotation: false),
+        Client(name: "Abarrotes Don Chuy", address: "Av. Reforma 234, Col. Centro", pieces: 48, status: .complete, isSuggestedRotation: false)
     ]
 
     @EnvironmentObject private var authVM: AuthViewModel
     @State private var showNextStop = false
+    @State private var routeStarted = false
 
     var body: some View {
         NavigationStack {
@@ -62,14 +64,14 @@ struct MainRouteView: View {
                             .font(.system(size: BimboLayout.titleSize, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
 
-                        Text("Martes, 5 mayo · 1 atendida · 5 pendientes")
+                        Text(routeStatusSubtitle)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.85))
                     }
 
                     Spacer()
 
-                    BrandLogoButton { authVM.signOut() }
+                    BrandLogoToolbarCluster { authVM.signOut() }
                 }
 
                 RoutePreviewCard(coordinates: simulatedCoordinates)
@@ -83,19 +85,32 @@ struct MainRouteView: View {
     var clientsSection: some View {
         VStack(spacing: 12) {
             ForEach(clients) { client in
+<<<<<<< HEAD
+                Group {
+                    if client.status == .complete {
+                        ClientStopRow(client: client)
+                    } else {
+                        NavigationLink {
+                            StopDetailView(client: client)
+                        } label: {
+                            ClientStopRow(client: client)
+                        }
+                    }
+=======
                 NavigationLink {
                     StopDetailView(client: client, onComplete: {
                         completeClient(client)
                     })
                 } label: {
                     ClientStopRow(client: client)
+>>>>>>> 5a4801b574f8cc750cd2188d142348e0ffe8fe27
                 }
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.top, 68)
-        .padding(.bottom, 120)
+        .padding(.bottom, 168)
     }
 
     private let simulatedCoordinates: [CLLocationCoordinate2D] = [
@@ -104,17 +119,41 @@ struct MainRouteView: View {
         CLLocationCoordinate2D(latitude: 19.418700, longitude: -99.162000)
     ]
 
+    private var routeStatusSubtitle: String {
+        let atendidas = clients.filter { $0.status == .complete }.count
+        let pendientes = clients.filter { $0.status == .next || $0.status == .pending }.count
+        let sufijo = atendidas == 1 ? "" : "s"
+        return "Martes, 5 mayo · \(atendidas) atendida\(sufijo) · \(pendientes) pendientes"
+    }
+
     var continueButton: some View {
-        Button {
-            showNextStop = true
-        } label: {
-            Text("Continuar Recorrido")
-                .font(.headline.weight(.bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .foregroundStyle(.white)
-                .background(AppPalette.brandRed)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        VStack(spacing: 10) {
+            Button {
+                routeStarted = true
+            } label: {
+                Text("Comenzar Ruta")
+                    .font(.headline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(AppPalette.navy)
+                    .background(AppPalette.secondaryButtonFill)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showNextStop = true
+            } label: {
+                Text("Continuar Recorrido")
+                    .font(.headline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .foregroundStyle(.white)
+                    .background(AppPalette.brandRed)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: routeStarted ? AppPalette.brandRed.opacity(0.38) : .clear, radius: 10, x: 0, y: 5)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 18)
@@ -194,6 +233,10 @@ private struct RouteCaption: View {
 private struct ClientStopRow: View {
     let client: Client
 
+    private var isCompleted: Bool {
+        client.status == .complete
+    }
+
     var body: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
@@ -203,7 +246,7 @@ private struct ClientStopRow: View {
                     HStack(spacing: 8) {
                         Text(client.name)
                             .font(.headline.weight(.semibold))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(isCompleted ? Color.secondary : Color.primary)
                             .lineLimit(1)
 
                         if client.status == .next {
@@ -214,18 +257,28 @@ private struct ClientStopRow: View {
                     Text(client.address)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .opacity(isCompleted ? 0.85 : 1)
                         .lineLimit(1)
                 }
 
                 Spacer(minLength: 8)
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(client.pieces)")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(AppPalette.brandRed)
-                    Text("PZS")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                Group {
+                    if isCompleted {
+                        Text("ATENDIDA")
+                            .font(.caption.weight(.heavy))
+                            .tracking(0.4)
+                            .foregroundStyle(AppPalette.semaphoreGreenText)
+                    } else {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(client.pieces)")
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(AppPalette.brandRed)
+                            Text("PZS")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 
@@ -251,20 +304,37 @@ private struct ClientStopRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(client.status == .next ? AppPalette.brandRed.opacity(0.35) : Color.gray.opacity(0.15), lineWidth: 1)
+                .stroke(
+                    client.status == .next ? AppPalette.brandRed.opacity(0.35) : Color.gray.opacity(0.15),
+                    lineWidth: 1
+                )
         )
+        .opacity(isCompleted ? 0.92 : 1)
         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
 
     private var icon: some View {
-        Circle()
-            .fill(Color(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 252.0 / 255.0))
-            .frame(width: 38, height: 38)
-            .overlay {
-                Image(systemName: "storefront")
-                    .foregroundStyle(AppPalette.navy)
-                    .font(.callout.weight(.bold))
+        Group {
+            if isCompleted {
+                Circle()
+                    .fill(AppPalette.semaphoreGreenFill)
+                    .frame(width: 38, height: 38)
+                    .overlay {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(AppPalette.semaphoreGreenText)
+                            .font(.callout.weight(.bold))
+                    }
+            } else {
+                Circle()
+                    .fill(Color(red: 242.0 / 255.0, green: 245.0 / 255.0, blue: 252.0 / 255.0))
+                    .frame(width: 38, height: 38)
+                    .overlay {
+                        Image(systemName: "storefront")
+                            .foregroundStyle(AppPalette.navy)
+                            .font(.callout.weight(.bold))
+                    }
             }
+        }
     }
 
     private var statusBadge: some View {
@@ -382,5 +452,6 @@ struct MainRouteView_Previews: PreviewProvider {
     static var previews: some View {
         MainRouteView()
             .environmentObject(AuthViewModel())
+            .environmentObject(ConnectivityViewModel())
     }
 }

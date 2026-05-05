@@ -74,6 +74,7 @@ struct RotateProductsSheet: View {
                                 RotateProductRow(
                                     name: lines[idx].name,
                                     sku: lines[idx].sku,
+                                    systemImage: BimboDemoProductSymbol.systemImage(forSKU: lines[idx].sku),
                                     onTruckPieces: lines[idx].onTruckPieces,
                                     rotatingQty: Binding(
                                         get: { lines[idx].rotatingQty },
@@ -272,6 +273,7 @@ struct RotateProductsSheet: View {
 private struct RotateProductRow: View {
     let name: String
     let sku: String
+    let systemImage: String
     let onTruckPieces: Int
     @Binding var rotatingQty: Int
 
@@ -287,10 +289,13 @@ private struct RotateProductRow: View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.gray.opacity(0.22), lineWidth: 1)
+                .background(Color.white)
                 .frame(width: 52, height: 52)
                 .overlay {
-                    Image(systemName: "photo")
-                        .foregroundStyle(.tertiary)
+                    Image(systemName: systemImage)
+                        .font(.title3)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
                 }
 
             VStack(alignment: .leading, spacing: 4) {

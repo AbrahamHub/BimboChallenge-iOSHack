@@ -100,6 +100,8 @@ struct BimboStepperProductCard: View {
     let maxQuantity: Int
     /// Si `true`, muestra el placeholder tipo mock `[ÍCONO]` con borde punteado.
     var useIconPlaceholder: Bool = false
+    /// Por SKU demo (`BimboDemoProductSymbol`); si es `nil` y no hay placeholder, se usa `photo`.
+    var systemImage: String? = nil
 
     private var canIncrement: Bool { quantity < maxQuantity }
     private var canDecrement: Bool { quantity > 0 }
@@ -119,10 +121,13 @@ struct BimboStepperProductCard: View {
                 } else {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .stroke(Color.gray.opacity(0.22), lineWidth: 1)
+                        .background(Color.white)
                         .frame(width: 52, height: 52)
                         .overlay {
-                            Image(systemName: "photo")
-                                .foregroundStyle(.tertiary)
+                            Image(systemName: systemImage ?? "photo")
+                                .font(.title3)
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
                         }
                 }
             }

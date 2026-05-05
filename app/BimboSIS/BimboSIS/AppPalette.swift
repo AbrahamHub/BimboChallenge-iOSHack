@@ -41,3 +41,58 @@ struct BrandLogoButton: View {
         .buttonStyle(.plain)
     }
 }
+
+/// Insignia tipo cápsula **OFFLINE** (punto amarillo) sobre el logo Bimbo.
+private struct OfflineIndicatorBadge: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(AppPalette.lineYellow)
+                .frame(width: 8, height: 8)
+
+            Text("OFFLINE")
+                .font(.caption2.weight(.heavy))
+                .tracking(0.55)
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color(red: 52.0 / 255.0, green: 62.0 / 255.0, blue: 98.0 / 255.0))
+        .clipShape(Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Sin conexión"))
+    }
+}
+
+/// Logo de marca con indicador offline encima cuando no hay red.
+struct BrandLogoToolbarCluster: View {
+    @EnvironmentObject private var connectivity: ConnectivityViewModel
+    var signOutAction: () -> Void
+
+    var body: some View {
+        VStack(spacing: 6) {
+            if connectivity.isOffline {
+                OfflineIndicatorBadge()
+            }
+            BrandLogoButton(action: signOutAction)
+        }
+    }
+}
+
+/// SF Symbols por SKU demo (pan, integral, donas, etc.) para listas de stock / rotación / confirmación.
+enum BimboDemoProductSymbol {
+    /// Nombres **SF Symbols** estables (iOS 15+) para que el ícono siempre resuelva en runtime.
+    static func systemImage(forSKU sku: String) -> String {
+        switch sku {
+        case "SKU BIM-001": return "bag.fill"
+        case "SKU BIM-002": return "leaf.fill"
+        case "SKU BIM-003": return "square.stack.fill"
+        case "SKU BIM-004": return "moon.stars.fill"
+        case "SKU BIM-005": return "seal.fill"
+        case "SKU BIM-006": return "flame.fill"
+        case "SKU BIM-007": return "square.grid.2x2.fill"
+        case "SKU BIM-008": return "snowflake"
+        default: return "shippingbox.fill"
+        }
+    }
+}
