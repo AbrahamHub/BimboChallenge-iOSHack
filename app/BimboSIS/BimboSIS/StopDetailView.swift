@@ -1,30 +1,51 @@
 import SwiftUI
 import UIKit
 
+/// Prioridad visual tipo semáforo para cantidades “a entregar”.
+enum DeliverySemaphoreBadge: Hashable {
+    case critical
+    case warning
+    case ok
+}
+
 struct Product: Identifiable {
     let id = UUID()
     let name: String
     let qty: Int
-    let accent: Color
+    let semaphore: DeliverySemaphoreBadge
 }
 
 struct StopDetailView: View {
     let client: Client
 
-    let products: [Product] = [
-        Product(name: "Pan Blanco Grande", qty: 12, accent: Color(red: 1.0, green: 0.93, blue: 0.93)),
-        Product(name: "Pan Integral", qty: 8, accent: Color(red: 1.0, green: 0.96, blue: 0.84)),
-        Product(name: "Bimbolos", qty: 6, accent: Color(red: 1.0, green: 0.96, blue: 0.84))
+    @EnvironmentObject private var authVM: AuthViewModel
+
+    private let products: [Product] = [
+        Product(name: "Pan Blanco Grande", qty: 12, semaphore: .critical),
+        Product(name: "Pan Integral", qty: 8, semaphore: .warning),
+        Product(name: "Bimbollos", qty: 6, semaphore: .ok)
     ]
 
     @State private var showCamera = false
-    @State private var capturedImage: UIImage? = nil
+    @State private var capturedImage: UIImage?
     @State private var showImagePreview = false
+    @State private var showRotateSheet = false
+    /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
+    @State private var confirmedRotationPieces = 0
+    /// Último estado del modal para que al reabrir sigan cuadrando las cantidades.
+    @State private var rotationDraftLines: [RotateDraftLine] = RotateProductsSheet.defaultLines
+
+    private var rotateButtonTitle: String {
+        guard confirmedRotationPieces > 0 else {
+            return "Productos a Rotar"
+        }
+        return "Productos a Rotar (\(confirmedRotationPieces) pzs)"
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                topSection
+                stopHeader
 
                 VStack(spacing: 12) {
                     sectionTitle
@@ -33,135 +54,163 @@ struct StopDetailView: View {
                         ProductRow(product: product)
                     }
 
-                    primaryActionButton(
-                        title: "Productos rotados (4)",
-                        icon: "arrow.2.circlepath",
-                        background: Color(red: 92 / 255, green: 106 / 255, blue: 171 / 255),
-                        foreground: .white
-                    ) {
-                        // TODO: Navegar al detalle de productos rotados.
-                    }
-
-                    primaryActionButton(
-                        title: "Entrega confirmada",
-                        icon: "checkmark",
-                        background: .white,
-                        foreground: Color(red: 63 / 255, green: 71 / 255, blue: 89 / 255)
-                    ) {
-                        // TODO: Confirmar entrega y actualizar estado/stock.
-                    }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.gray.opacity(0.12), lineWidth: 1)
-                    )
-
-                    primaryActionButton(
-                        title: "Escanear anaquel",
-                        icon: "camera.viewfinder",
-                        trailingIcon: "chevron.right",
-                        background: Color(red: 3 / 255, green: 24 / 255, blue: 80 / 255),
-                        foreground: .white
-                    ) {
-                        showCamera = true
-                    }
-                    .fullScreenCover(isPresented: $showCamera) {
-                        ShelfScannerView { image in
-                            capturedImage = image
-                            showImagePreview = true
-                            showCamera = false
-                        }
-                    }
+                    actionButtonsBlock
 
                     if showImagePreview, let img = capturedImage {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 220)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Color.white.opacity(0.75), lineWidth: 1)
-                            )
+                        capturedPreview(img)
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 24)
+                .padding(.top, 62)
+                .padding(.bottom, 28)
                 .background(Color.white)
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                )
-                .offset(y: -16)
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             }
         }
-        .background(Color(red: 246 / 255, green: 248 / 255, blue: 252 / 255).ignoresSafeArea())
+        .background(AppPalette.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .sheet(isPresented: $showRotateSheet) {
+            RotateProductsSheet(initialLines: rotationDraftLines) { result in
+                rotationDraftLines = result
+                confirmedRotationPieces = result.reduce(into: 0) { $0 += $1.rotatingQty }
+            }
+        }
     }
 
-    private var topSection: some View {
+    /// Misma jerarquía visual que `MainRouteView.header` + tarjeta que “cae” sobre el panel blanco.
+    private var stopHeader: some View {
         ZStack(alignment: .bottom) {
-            Color(red: 3 / 255, green: 24 / 255, blue: 80 / 255)
-                .frame(height: 278)
+            AppPalette.navy
+                .frame(height: 198)
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .ignoresSafeArea(edges: .top)
 
-            VStack(spacing: 16) {
+            VStack(spacing: 22) {
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text("PRÓXIMA PARADA · 2 DE 6")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.86))
+                            .foregroundStyle(.white.opacity(0.88))
 
                         Text(client.name)
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
                             .minimumScaleFactor(0.75)
-                            .lineLimit(1)
+                            .lineLimit(2)
                             .foregroundStyle(.white)
 
-                        HStack(spacing: 6) {
+                        HStack(alignment: .top, spacing: 6) {
                             Image(systemName: "location.fill")
-                            Text(client.address)
+                                .font(.subheadline.weight(.semibold))
+                            Text(displayAddress)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.9))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.95))
                     }
 
-                    Spacer()
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(.white)
-                        .frame(width: 48, height: 48)
-                        .overlay {
-                            Text("B")
-                                .font(.title3.weight(.heavy))
-                                .foregroundStyle(Color(red: 226 / 255, green: 27 / 255, blue: 26 / 255))
-                        }
+                    Spacer(minLength: 8)
+
+                    BrandLogoButton { authVM.signOut() }
                 }
 
                 NarrationCard()
-                    .padding(.bottom, -18)
+                    .padding(.bottom, -52)
             }
             .padding(.horizontal, 20)
             .padding(.top, 52)
         }
     }
 
+    /// Dirección con sufijo tipo maqueta cuando falta colonia.
+    private var displayAddress: String {
+        let addr = client.address.trimmingCharacters(in: .whitespacesAndNewlines)
+        if addr.localizedCaseInsensitiveContains("col.") || addr.localizedCaseInsensitiveContains("col ") {
+            return addr
+        }
+        return "\(addr), Col. Centro"
+    }
+
     private var sectionTitle: some View {
         HStack {
             Text("ENTREGAR EN ESTA PARADA")
-                .font(.caption.weight(.bold))
+                .font(.caption.weight(.heavy))
                 .foregroundStyle(.secondary)
                 .tracking(0.8)
             Spacer()
         }
-        .padding(.top, 2)
+        .padding(.top, 4)
+    }
+
+    private var actionButtonsBlock: some View {
+        VStack(spacing: 12) {
+            primaryActionButton(
+                title: rotateButtonTitle,
+                icon: "arrow.2.circlepath",
+                background: AppPalette.navy,
+                foreground: .white,
+                trailingIcon: nil
+            ) {
+                showRotateSheet = true
+            }
+
+            primaryActionButton(
+                title: "Confirmar de Entregado",
+                icon: "checkmark",
+                background: AppPalette.secondaryButtonFill,
+                foreground: AppPalette.mutedButtonForeground,
+                trailingIcon: nil
+            ) {
+                // TODO: Confirmar entrega y actualizar estado/stock.
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.gray.opacity(0.18), lineWidth: 1)
+            )
+
+            primaryActionButton(
+                title: "Escanear anaquel",
+                icon: "camera.viewfinder",
+                background: AppPalette.secondaryButtonFill,
+                foreground: AppPalette.mutedButtonForeground,
+                trailingIcon: "chevron.right"
+            ) {
+                showCamera = true
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.gray.opacity(0.18), lineWidth: 1)
+            )
+            .fullScreenCover(isPresented: $showCamera) {
+                ShelfScannerView { image in
+                    capturedImage = image
+                    showImagePreview = true
+                    showCamera = false
+                }
+            }
+        }
+        .padding(.top, 6)
+    }
+
+    private func capturedPreview(_ img: UIImage) -> some View {
+        Image(uiImage: img)
+            .resizable()
+            .scaledToFit()
+            .frame(maxHeight: 220)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.gray.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 
     private func primaryActionButton(
         title: String,
         icon: String,
-        trailingIcon: String? = nil,
         background: Color,
         foreground: Color,
+        trailingIcon: String?,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -194,80 +243,157 @@ private struct NarrationCard: View {
     var body: some View {
         HStack(spacing: 10) {
             Circle()
-                .fill(Color(red: 1, green: 59 / 255, blue: 58 / 255))
-                .frame(width: 36, height: 36)
+                .fill(AppPalette.brandRed)
+                .frame(width: 38, height: 38)
                 .overlay {
                     Image(systemName: "speaker.wave.2.fill")
                         .font(.subheadline.weight(.heavy))
                         .foregroundStyle(.white)
                 }
 
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Reproduciendo narración")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(.white)
-                Text("Audio automático · 2 repeticiones")
+                Text("Audio automático - 2 repeticiones")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.82))
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
-            Text("Repetir")
-                .font(.caption.weight(.heavy))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(red: 1, green: 59 / 255, blue: 58 / 255))
-                .clipShape(Capsule(style: .continuous))
+            Button {
+                // TODO: Repetir narración de audio.
+            } label: {
+                Text("Repetir")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(AppPalette.brandRed)
+                    .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
-        .padding(12)
-        .background(Color(red: 15 / 255, green: 42 / 255, blue: 122 / 255))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(14)
+        .background(AppPalette.deepNavy)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 8)
     }
 }
 
 private struct ProductRow: View {
     let product: Product
 
+    private var badgeBackground: Color {
+        switch product.semaphore {
+        case .critical:
+            return AppPalette.semaphoreRedFill
+        case .warning:
+            return AppPalette.semaphoreYellowFill
+        case .ok:
+            return AppPalette.semaphoreGreenFill
+        }
+    }
+
+    private var qtyForeground: Color {
+        switch product.semaphore {
+        case .critical:
+            return AppPalette.brandRed
+        case .warning:
+            return AppPalette.navy
+        case .ok:
+            return AppPalette.semaphoreGreenText
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [4]))
-                .foregroundStyle(Color(red: 100 / 255, green: 126 / 255, blue: 196 / 255))
-                .frame(width: 46, height: 46)
+                .foregroundStyle(AppPalette.stockQuantity.opacity(0.55))
+                .frame(width: 48, height: 48)
                 .overlay {
                     Text("ÍCONO")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color(red: 100 / 255, green: 126 / 255, blue: 196 / 255))
+                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.85))
                 }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(product.name)
-                    .font(.headline.weight(.semibold))
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .center, spacing: 6) {
+                    Text(product.name)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(AppPalette.navy)
+
+                    semaphoreDot
+                }
+
                 Text("A entregar")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            Text("\(product.qty)")
-                .font(.title3.weight(.heavy))
-                .foregroundStyle(Color(red: 226 / 255, green: 27 / 255, blue: 26 / 255))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(product.accent)
-                .clipShape(Capsule(style: .continuous))
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(product.qty)")
+                    .font(.title3.weight(.heavy))
+                    .foregroundStyle(qtyForeground)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(badgeBackground)
+                    .clipShape(Capsule(style: .continuous))
+
+                Text("PZS")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(12)
         .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.gray.opacity(0.15), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+    }
+
+    private var semaphoreDot: some View {
+        Circle()
+            .fill(semaphoreDotColor)
+            .frame(width: 8, height: 8)
+            .accessibilityLabel(Text(accessibilitySemaphoreLabel))
+    }
+
+    private var semaphoreDotColor: Color {
+        switch product.semaphore {
+        case .critical: return AppPalette.brandRed
+        case .warning: return AppPalette.lineYellow
+        case .ok: return AppPalette.semaphoreGreenText
+        }
+    }
+
+    private var accessibilitySemaphoreLabel: String {
+        switch product.semaphore {
+        case .critical: return "Prioridad alta"
+        case .warning: return "Prioridad media"
+        case .ok: return "Prioridad normal"
+        }
     }
 }
 
+struct StopDetailView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationStack {
+            StopDetailView(client: Client(
+                name: "Tienda La Esquina",
+                address: "Calle 5 de Mayo 89",
+                pieces: 32,
+                status: .next,
+                isSuggestedRotation: true
+            ))
+            .environmentObject(AuthViewModel())
+        }
+    }
+}

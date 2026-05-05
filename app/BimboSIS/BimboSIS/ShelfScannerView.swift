@@ -64,14 +64,16 @@ struct ShelfScannerView: View {
                 Button {
                     // TODO: Mostrar ayuda detallada del escáner.
                 } label: {
-                    Image(systemName: "questionmark")
-                        .font(.subheadline.weight(.bold))
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 44, height: 44)
                         .background(.black.opacity(0.35))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text("Ayuda"))
             }
             .padding(.horizontal, 20)
             .padding(.top, 56)
@@ -288,9 +290,10 @@ private struct CircleButton: View {
             // TODO: Conectar galería/cambio de cámara según icono.
         } label: {
             Image(systemName: systemName)
-                .font(.title3.weight(.semibold))
+                .font(.system(size: 24, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
+                .frame(width: 46, height: 46)
                 .background(.black.opacity(0.45))
                 .clipShape(Circle())
         }
