@@ -10,6 +10,7 @@ struct Product: Identifiable {
 
 struct StopDetailView: View {
     let client: Client
+    var onComplete: (() -> Void)? = nil
 
     let products: [Product] = [
         Product(name: "Pan Blanco Grande", qty: 12, accent: Color(red: 1.0, green: 0.93, blue: 0.93)),
@@ -20,6 +21,8 @@ struct StopDetailView: View {
     @State private var showCamera = false
     @State private var capturedImage: UIImage? = nil
     @State private var showImagePreview = false
+    @State private var showStock = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -39,7 +42,10 @@ struct StopDetailView: View {
                         background: Color(red: 92 / 255, green: 106 / 255, blue: 171 / 255),
                         foreground: .white
                     ) {
-                        // TODO: Navegar al detalle de productos rotados.
+                        showStock = true
+                    }
+                    .sheet(isPresented: $showStock) {
+                        StockView()
                     }
 
                     primaryActionButton(
@@ -48,7 +54,8 @@ struct StopDetailView: View {
                         background: .white,
                         foreground: Color(red: 63 / 255, green: 71 / 255, blue: 89 / 255)
                     ) {
-                        // TODO: Confirmar entrega y actualizar estado/stock.
+                        onComplete?()
+                        dismiss()
                     }
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)

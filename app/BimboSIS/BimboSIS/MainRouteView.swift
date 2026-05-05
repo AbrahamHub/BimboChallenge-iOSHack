@@ -1,23 +1,23 @@
 import SwiftUI
 import MapKit
 
-struct Client: Identifiable {
+struct Client: Identifiable, Equatable {
     let id = UUID()
     let name: String
     let address: String
     let pieces: Int
-    let status: ClientStatus
+    var status: ClientStatus
     let isSuggestedRotation: Bool
 }
 
-enum ClientStatus: String {
+enum ClientStatus: String, Equatable {
     case next = "SIGUIENTE"
     case pending = "PENDIENTE"
     case complete = "COMPLETADA"
 }
 
 struct MainRouteView: View {
-    let clients: [Client] = [
+    @State private var clients: [Client] = [
         Client(name: "Tienda La Esquina", address: "Calle 5 de Mayo 89", pieces: 32, status: .next, isSuggestedRotation: true),
         Client(name: "Abarrotes Don Chuy", address: "Av. Reforma 234, Col. Centro", pieces: 48, status: .pending, isSuggestedRotation: false),
         Client(name: "Mini Súper Lupita", address: "Insurgentes Sur 1102", pieces: 76, status: .pending, isSuggestedRotation: false)
@@ -42,7 +42,9 @@ struct MainRouteView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showNextStop) {
-                StopDetailView(client: nextClient)
+                StopDetailView(client: nextClient, onComplete: {
+                    completeClient(nextClient)
+                })
             }
         }
     }
@@ -83,7 +85,9 @@ struct MainRouteView: View {
         VStack(spacing: 12) {
             ForEach(clients) { client in
                 NavigationLink {
-                    StopDetailView(client: client)
+                    StopDetailView(client: client, onComplete: {
+                        completeClient(client)
+                    })
                 } label: {
                     ClientStopRow(client: client)
                 }
@@ -119,6 +123,17 @@ struct MainRouteView: View {
 
     var nextClient: Client {
         clients.first(where: { $0.status == .next }) ?? clients[0]
+    }
+    
+    private func completeClient(_ client: Client) {
+        if let index = clients.firstIndex(where: { $0.id == client.id }) {
+            clients[index].status = .complete
+            
+            // Find the next pending client and make it next
+            if let nextIndex = clients.firstIndex(where: { $0.status == .pending }) {
+                clients[nextIndex].status = .next
+            }
+        }
     }
 }
 
