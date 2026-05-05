@@ -1,6 +1,4 @@
 import SwiftUI
-import SwiftData
-
 
 struct ContentView: View {
     @EnvironmentObject var auth: AuthViewModel
@@ -46,19 +44,15 @@ struct BottomTabView: View {
                     Label("Ruta", systemImage: "mappin")
                 }
 
-            VStack {
-                Text("Stock")
-            }
-            .tabItem {
-                Label("Stock", systemImage: "cube.box")
-            }
+            StockView()
+                .tabItem {
+                    Label("Stock", systemImage: "cube.box")
+                }
 
-            VStack {
-                Text("Historial")
-            }
-            .tabItem {
-                Label("Historial", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
-            }
+            HistorialView()
+                .tabItem {
+                    Label("Historial", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                }
         }
         .tint(Color(red: 226/255, green: 27/255, blue: 26/255))
     }

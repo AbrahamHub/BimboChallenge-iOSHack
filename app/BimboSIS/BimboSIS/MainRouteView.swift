@@ -24,6 +24,7 @@ struct MainRouteView: View {
     ]
 
     @EnvironmentObject private var authVM: AuthViewModel
+    @State private var showNextStop = false
 
     var body: some View {
         NavigationStack {
@@ -31,21 +32,24 @@ struct MainRouteView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         header
-                        RoutePreviewCard(coordinates: simulatedCoordinates)
+                        routeCard
                         clientsSection
                     }
                 }
-                .background(RoutePalette.background.ignoresSafeArea())
+                .background(AppPalette.background.ignoresSafeArea())
 
                 continueButton
             }
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $showNextStop) {
+                StopDetailView(client: nextClient)
+            }
         }
     }
 
     var header: some View {
         ZStack(alignment: .bottom) {
-            RoutePalette.navy
+            AppPalette.navy
                 .frame(height: 190)
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .ignoresSafeArea(edges: .top)
@@ -64,19 +68,7 @@ struct MainRouteView: View {
 
                     Spacer()
 
-                    Button {
-                        authVM.signOut()
-                    } label: {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(.white)
-                            .frame(width: 48, height: 48)
-                            .overlay {
-                                Text("B")
-                                    .font(.title3.weight(.heavy))
-                                    .foregroundStyle(RoutePalette.brandRed)
-                            }
-                    }
-                    .buttonStyle(.plain)
+                    BrandLogoButton { authVM.signOut() }
                 }
 
                 RoutePreviewCard(coordinates: simulatedCoordinates)
@@ -103,34 +95,31 @@ struct MainRouteView: View {
         .padding(.bottom, 120)
     }
 
-    var simulatedCoordinates: [CLLocationCoordinate2D] {
-        [
-            CLLocationCoordinate2D(latitude: 19.432608, longitude: -99.133209),
-            CLLocationCoordinate2D(latitude: 19.427500, longitude: -99.162000),
-            CLLocationCoordinate2D(latitude: 19.418700, longitude: -99.162000)
-        ]
-    }
+    private let simulatedCoordinates: [CLLocationCoordinate2D] = [
+        CLLocationCoordinate2D(latitude: 19.432608, longitude: -99.133209),
+        CLLocationCoordinate2D(latitude: 19.427500, longitude: -99.162000),
+        CLLocationCoordinate2D(latitude: 19.418700, longitude: -99.162000)
+    ]
 
     var continueButton: some View {
-        Button {} label: {
+        Button {
+            showNextStop = true
+        } label: {
             Text("Continuar Recorrido")
                 .font(.headline.weight(.bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .foregroundStyle(.white)
-                .background(RoutePalette.brandRed)
+                .background(AppPalette.brandRed)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 18)
     }
-}
 
-private enum RoutePalette {
-    static let navy = Color(red: 3.0 / 255.0, green: 24.0 / 255.0, blue: 80.0 / 255.0)
-    static let brandRed = Color(red: 226.0 / 255.0, green: 27.0 / 255.0, blue: 26.0 / 255.0)
-    static let background = Color(red: 245.0 / 255.0, green: 247.0 / 255.0, blue: 252.0 / 255.0)
-    static let lineYellow = Color(red: 255.0 / 255.0, green: 199.0 / 255.0, blue: 44.0 / 255.0)
+    var nextClient: Client {
+        clients.first(where: { $0.status == .next }) ?? clients[0]
+    }
 }
 
 private struct RoutePreviewCard: View {
@@ -159,14 +148,14 @@ private struct RouteCaption: View {
                 .frame(width: 34, height: 34)
                 .overlay {
                     Image(systemName: "mappin.and.ellipse")
-                        .foregroundStyle(RoutePalette.navy)
+                        .foregroundStyle(AppPalette.navy)
                         .font(.caption.weight(.bold))
                 }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("RUTA DEL DÍA")
                     .font(.caption2.weight(.heavy))
-                    .foregroundStyle(RoutePalette.lineYellow)
+                    .foregroundStyle(AppPalette.lineYellow)
 
                 Text("Ver recorrido en Apple Maps")
                     .font(.subheadline.weight(.semibold))
@@ -219,7 +208,7 @@ private struct ClientStopRow: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(client.pieces)")
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(RoutePalette.brandRed)
+                        .foregroundStyle(AppPalette.brandRed)
                     Text("PZS")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -236,7 +225,7 @@ private struct ClientStopRow: View {
                         .font(.caption.weight(.semibold))
                     Spacer()
                 }
-                .foregroundStyle(RoutePalette.navy)
+                .foregroundStyle(AppPalette.navy)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(Color(red: 233.0 / 255.0, green: 239.0 / 255.0, blue: 250.0 / 255.0))
@@ -248,7 +237,7 @@ private struct ClientStopRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(client.status == .next ? RoutePalette.brandRed.opacity(0.35) : Color.gray.opacity(0.15), lineWidth: 1)
+                .stroke(client.status == .next ? AppPalette.brandRed.opacity(0.35) : Color.gray.opacity(0.15), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
@@ -259,7 +248,7 @@ private struct ClientStopRow: View {
             .frame(width: 38, height: 38)
             .overlay {
                 Image(systemName: "storefront")
-                    .foregroundStyle(RoutePalette.navy)
+                    .foregroundStyle(AppPalette.navy)
                     .font(.callout.weight(.bold))
             }
     }
@@ -267,12 +256,12 @@ private struct ClientStopRow: View {
     private var statusBadge: some View {
         Text(client.status.rawValue)
             .font(.caption2.weight(.heavy))
-            .foregroundStyle(RoutePalette.brandRed)
+            .foregroundStyle(AppPalette.brandRed)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(
                 Capsule(style: .continuous)
-                    .fill(RoutePalette.brandRed.opacity(0.12))
+                    .fill(AppPalette.brandRed.opacity(0.12))
             )
     }
 }
@@ -289,11 +278,16 @@ struct RouteMapView: UIViewRepresentable {
         map.showsUserLocation = false
         map.isUserInteractionEnabled = false
 
+        context.coordinator.parent = self
         updateAnnotationsAndOverlay(on: map)
+        context.coordinator.cacheCoordinates(coordinates)
         return map
     }
 
     func updateUIView(_ uiView: MKMapView, context: Context) {
+        context.coordinator.parent = self
+        guard !context.coordinator.coordinatesMatch(coordinates) else { return }
+        context.coordinator.cacheCoordinates(coordinates)
         updateAnnotationsAndOverlay(on: uiView)
     }
 
@@ -326,9 +320,21 @@ struct RouteMapView: UIViewRepresentable {
 
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: RouteMapView
+        private var cachedCoordinates: [CLLocationCoordinate2D]?
 
         init(_ parent: RouteMapView) {
             self.parent = parent
+        }
+
+        func coordinatesMatch(_ new: [CLLocationCoordinate2D]) -> Bool {
+            guard let cached = cachedCoordinates, cached.count == new.count else { return false }
+            return zip(cached, new).allSatisfy { a, b in
+                a.latitude == b.latitude && a.longitude == b.longitude
+            }
+        }
+
+        func cacheCoordinates(_ coords: [CLLocationCoordinate2D]) {
+            cachedCoordinates = coords
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
