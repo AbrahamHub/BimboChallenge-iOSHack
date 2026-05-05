@@ -1,1 +1,20 @@
+# Ignorar datasets grandes que no deben estar en el repo
+Model/grupo-bimbo-inventory-demand/*.csv
+
+# Ignorar archivos derivados y temporales de Xcode
+*/DerivedData/
+*.xcuserstate
+*.xcworkspace
+*.xcuserdata/
+
+# CocoaPods / Carthage / SPM artifacts
+/Pods/
+/Carthage/
+.build/
+
+# macOS
+.DS_Store
+
+# Swift Package Manager
+/.build
 
