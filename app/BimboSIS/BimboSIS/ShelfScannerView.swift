@@ -418,8 +418,19 @@ final class ShelfCameraModel: NSObject, ObservableObject {
 extension ShelfCameraModel: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         guard error == nil, let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else { return }
-        DispatchQueue.main.async {
-            self.capturedImage = image
+        
+        Task {
+            do {
+                let processedImage = try await ShelfImageProcessor.shared.processImage(image)
+                await MainActor.run {
+                    self.capturedImage = processedImage
+                }
+            } catch {
+                print("Error al procesar la imagen: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.capturedImage = image // Fallback a la imagen original
+                }
+            }
         }
     }
 }
