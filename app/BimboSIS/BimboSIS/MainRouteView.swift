@@ -32,7 +32,7 @@ struct MainRouteView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         header
-                        routeCard
+                        RoutePreviewCard(coordinates: simulatedCoordinates)
                         clientsSection
                     }
                 }
