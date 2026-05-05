@@ -33,6 +33,8 @@ struct StopDetailView: View {
     @State private var showStock = false
     @Environment(\.dismiss) private var dismiss
     @State private var showRotateSheet = false
+    @State private var showConfirmOrder = false
+    @State private var isAnalyzing = false
     /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
     @State private var confirmedRotationPieces = 0
     /// Último estado del modal para que al reabrir sigan cuadrando las cantidades.
@@ -57,48 +59,6 @@ struct StopDetailView: View {
                         ProductRow(product: product)
                     }
 
-                    primaryActionButton(
-                        title: "Productos rotados (4)",
-                        icon: "arrow.2.circlepath",
-                        background: Color(red: 92 / 255, green: 106 / 255, blue: 171 / 255),
-                        foreground: .white
-                    ) {
-                        showStock = true
-                    }
-                    .sheet(isPresented: $showStock) {
-                        StockView()
-                    }
-
-                    primaryActionButton(
-                        title: "Entrega confirmada",
-                        icon: "checkmark",
-                        background: .white,
-                        foreground: Color(red: 63 / 255, green: 71 / 255, blue: 89 / 255)
-                    ) {
-                        onComplete?()
-                        dismiss()
-                    }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.gray.opacity(0.12), lineWidth: 1)
-                    )
-
-                    primaryActionButton(
-                        title: "Escanear anaquel",
-                        icon: "camera.viewfinder",
-                        trailingIcon: "chevron.right",
-                        background: Color(red: 3 / 255, green: 24 / 255, blue: 80 / 255),
-                        foreground: .white
-                    ) {
-                        showCamera = true
-                    }
-                    .fullScreenCover(isPresented: $showCamera) {
-                        ShelfScannerView { image in
-                            capturedImage = image
-                            showImagePreview = true
-                            showCamera = false
-                        }
-                    }
                     actionButtonsBlock
 
                     if showImagePreview, let img = capturedImage {
@@ -119,6 +79,34 @@ struct StopDetailView: View {
             RotateProductsSheet(initialLines: rotationDraftLines) { result in
                 rotationDraftLines = result
                 confirmedRotationPieces = result.reduce(into: 0) { $0 += $1.rotatingQty }
+            }
+        }
+        .navigationDestination(isPresented: $showConfirmOrder) {
+            ConfirmarOrdenView(
+                storeName: client.name,
+                lines: ConfirmarOrdenView.previewDemoLines
+            )
+        }
+        .overlay {
+            if isAnalyzing {
+                analysisOverlay
+            }
+        }
+    }
+
+    private var analysisOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(.white)
+                
+                Text("Analizando anaquel con IA...")
+                    .font(.headline)
+                    .foregroundStyle(.white)
             }
         }
     }
@@ -229,8 +217,15 @@ struct StopDetailView: View {
             .fullScreenCover(isPresented: $showCamera) {
                 ShelfScannerView { image in
                     capturedImage = image
-                    showImagePreview = true
                     showCamera = false
+                    
+                    // Simulación del flujo solicitado: Escaneo -> Análisis -> Pre-orden
+                    Task {
+                        isAnalyzing = true
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2s de "IA"
+                        isAnalyzing = false
+                        showConfirmOrder = true
+                    }
                 }
             }
         }

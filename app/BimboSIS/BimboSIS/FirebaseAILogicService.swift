@@ -20,6 +20,16 @@ enum FirebaseAIError: Error {
     case timeout
 }
 
+// Estructuras internas para el pipeline modular
+struct RawInventory: Codable {
+    struct Item: Codable {
+        let sku: String
+        let quantity: Int
+        let shelf_level: Int
+    }
+    let inventory: [Item]
+}
+
 actor FirebaseAILogicService {
     static let shared = FirebaseAILogicService()
     
@@ -29,63 +39,96 @@ actor FirebaseAILogicService {
     
     private init() {}
     
-    /// Procesamiento completo del pipeline requerido
+    /// Procesamiento modular del pipeline (Vision -> Intelligence -> Recommendations)
     func processShelfImage(imageData: Data) async throws -> StructuredShelfResult {
-        // 1. Subir imagen optimizada a Firebase Storage
+        // 1. Subir imagen a Storage
         let imageId = UUID().uuidString
-        let storageRef = storage.reference().child("shelves/\(imageId).jpg")
+        let gsUri = try await uploadImage(data: imageData, id: imageId)
+        
+        // 2. MÓDULO 1: Análisis Visual y Conteo (Multimodal)
+        let rawInventory = try await performVisualAnalysis(imageData: imageData)
+        
+        // 3. MÓDULO 2: Inteligencia FIFO y Salud (Text-only)
+        let shelfIntelligence = try await performIntelligenceAnalysis(rawInventory: rawInventory)
+        
+        // 4. Guardar en Firestore
+        try await saveResultToFirestore(result: shelfIntelligence, imageId: imageId, gsUri: gsUri)
+        
+        return shelfIntelligence
+    }
+    
+    // MARK: - Pasos del Pipeline Modular
+    
+    private func uploadImage(data: Data, id: String) async throws -> String {
+        let storageRef = storage.reference().child("shelves/\(id).jpg")
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
         
         do {
-            let metadata = StorageMetadata()
-            metadata.contentType = "image/jpeg"
-            _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
+            _ = try await storageRef.putDataAsync(data, metadata: metadata)
+            return "gs://\(storageRef.bucket)/\(storageRef.fullPath)"
         } catch {
             throw FirebaseAIError.uploadFailed(error)
         }
-        
-        let gsUri = "gs://\(storageRef.bucket)/\(storageRef.fullPath)"
-        
-        // 2. Enviar imagen a Firebase AI Logic (Vertex AI)
+    }
+    
+    private func performVisualAnalysis(imageData: Data) async throws -> RawInventory {
         let model = vertex.generativeModel(
             modelName: "gemini-1.5-flash",
-            generationConfig: GenerationConfig(responseMIMEType: "application/json")
+            generationConfig: GenerationConfig(responseMIMEType: "application/json"),
+            systemInstruction: ModelContent(role: "system", parts: ShelfAIPrompts.VisualAnalysis.systemPrompt)
         )
         
-        let prompt = """
-        Analiza esta imagen de un anaquel de pan Bimbo.
-        Devuelve un objeto JSON estrictamente con la siguiente estructura:
-        {
-            "products": ["lista", "de", "nombres", "de", "productos"],
-            "total_visible_products": 0,
-            "low_stock_products": ["lista", "de", "productos", "con", "poco", "inventario"],
-            "fifo_priority": ["lista", "de", "productos", "que", "deben", "rotarse"],
-            "shelf_health_score": 0 al 100
-        }
-        Asegúrate de que la respuesta sea un JSON válido.
-        """
+        let prompt = ShelfAIPrompts.VisualAnalysis.userPrompt(catalog: ShelfAIPrompts.productCatalog)
+        let image = UIImage(data: imageData) ?? UIImage()
         
-        let imageForAI = UIImage(data: imageData) ?? UIImage()
-        
-        let resultJSON: String
-        do {
-            let response = try await model.generateContent(prompt, imageForAI)
-            guard let text = response.text else {
+        return try await retryOperation(maxAttempts: 3) {
+            let response = try await model.generateContent(prompt, image)
+            guard let text = response.text, let data = text.data(using: .utf8) else {
                 throw FirebaseAIError.invalidResponse
             }
-            resultJSON = text
-        } catch {
-            throw FirebaseAIError.analysisFailed(error)
+            return try JSONDecoder().decode(RawInventory.self, from: data)
         }
+    }
+    
+    private func performIntelligenceAnalysis(rawInventory: RawInventory) async throws -> StructuredShelfResult {
+        let model = vertex.generativeModel(
+            modelName: "gemini-1.5-flash",
+            generationConfig: GenerationConfig(responseMIMEType: "application/json"),
+            systemInstruction: ModelContent(role: "system", parts: ShelfAIPrompts.ShelfIntelligence.systemPrompt)
+        )
         
-        // 3. Recibir JSON estructurado y decodificar
-        guard let jsonData = resultJSON.data(using: .utf8),
-              let structuredResult = try? JSONDecoder().decode(StructuredShelfResult.self, from: jsonData) else {
-            throw FirebaseAIError.invalidResponse
+        let inventoryString = (try? String(data: JSONEncoder().encode(rawInventory), encoding: .utf8)) ?? "{}"
+        let prompt = ShelfAIPrompts.ShelfIntelligence.userPrompt(inventoryJSON: inventoryString)
+        
+        return try await retryOperation(maxAttempts: 2) {
+            let response = try await model.generateContent(prompt)
+            guard let text = response.text, let data = text.data(using: .utf8) else {
+                throw FirebaseAIError.invalidResponse
+            }
+            
+            // Mapeamos el resultado modular al modelo de la App
+            struct IntelligenceResult: Codable {
+                let shelf_health_score: Int
+                let fifo_priority: [String]
+                let low_stock_products: [String]
+            }
+            
+            let intel = try JSONDecoder().decode(IntelligenceResult.self, from: data)
+            
+            return StructuredShelfResult(
+                products: rawInventory.inventory.map { $0.sku },
+                total_visible_products: rawInventory.inventory.reduce(0) { $0 + $1.quantity },
+                low_stock_products: intel.low_stock_products,
+                fifo_priority: intel.fifo_priority,
+                shelf_health_score: intel.shelf_health_score
+            )
         }
-        
-        // 4. Guardar resultado en Firestore
+    }
+    
+    private func saveResultToFirestore(result: StructuredShelfResult, imageId: String, gsUri: String) async throws {
         do {
-            var docData = try JSONEncoder().encode(structuredResult)
+            var docData = try JSONEncoder().encode(result)
             var dict = try JSONSerialization.jsonObject(with: docData, options: []) as? [String: Any] ?? [:]
             dict["timestamp"] = FieldValue.serverTimestamp()
             dict["storage_uri"] = gsUri
@@ -93,11 +136,25 @@ actor FirebaseAILogicService {
             
             try await db.collection("shelf_scans").document(imageId).setData(dict)
         } catch {
-            // Manejo offline/caché aquí: Firestore guarda offline por defecto,
-            // pero si falla localmente, reportamos.
             throw FirebaseAIError.firestoreFailed(error)
         }
-        
-        return structuredResult
+    }
+    
+    // MARK: - Utilidades
+    
+    private func retryOperation<T>(maxAttempts: Int, operation: () async throws -> T) async throws -> T {
+        var lastError: Error?
+        for attempt in 1...maxAttempts {
+            do {
+                return try await operation()
+            } catch {
+                lastError = error
+                if attempt < maxAttempts {
+                    let delay = AIProcessingStrategy.retryConfig(attempt: attempt)
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                }
+            }
+        }
+        throw lastError ?? FirebaseAIError.analysisFailed(NSError(domain: "AI", code: -1))
     }
 }

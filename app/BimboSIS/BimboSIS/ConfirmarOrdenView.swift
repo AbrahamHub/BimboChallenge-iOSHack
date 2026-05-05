@@ -41,7 +41,7 @@ struct ConfirmarOrdenView: View {
     }
 
     private var productCount: Int {
-        lines.filter(\.quantity > 0).count
+        lines.filter { $0.quantity > 0 }.count
     }
 
     private var totalPieces: Int {
