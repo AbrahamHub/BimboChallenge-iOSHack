@@ -85,25 +85,16 @@ struct MainRouteView: View {
     var clientsSection: some View {
         VStack(spacing: 12) {
             ForEach(clients) { client in
-<<<<<<< HEAD
-                Group {
-                    if client.status == .complete {
-                        ClientStopRow(client: client)
-                    } else {
-                        NavigationLink {
-                            StopDetailView(client: client)
-                        } label: {
-                            ClientStopRow(client: client)
-                        }
-                    }
-=======
-                NavigationLink {
-                    StopDetailView(client: client, onComplete: {
-                        completeClient(client)
-                    })
-                } label: {
+                if client.status == .complete {
                     ClientStopRow(client: client)
->>>>>>> 5a4801b574f8cc750cd2188d142348e0ffe8fe27
+                } else {
+                    NavigationLink {
+                        StopDetailView(client: client, onComplete: {
+                            completeClient(client)
+                        })
+                    } label: {
+                        ClientStopRow(client: client)
+                    }
                 }
             }
             .buttonStyle(.plain)
