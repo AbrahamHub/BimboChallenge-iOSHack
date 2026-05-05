@@ -43,7 +43,7 @@ struct BottomTabView: View {
         TabView {
             MainRouteView()
                 .tabItem {
-                    Label("Ruta", systemImage: "map")
+                    Label("Ruta", systemImage: "mappin")
                 }
 
             VStack {
@@ -57,9 +57,10 @@ struct BottomTabView: View {
                 Text("Historial")
             }
             .tabItem {
-                Label("Historial", systemImage: "clock.arrow.circlepath")
+                Label("Historial", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
             }
         }
+        .tint(Color(red: 226/255, green: 27/255, blue: 26/255))
     }
 }
 
