@@ -13,17 +13,20 @@ struct Product: Identifiable {
     let name: String
     let qty: Int
     let semaphore: DeliverySemaphoreBadge
+    /// SF Symbol alineado al SKU demo (`BimboDemoProductSymbol`).
+    let systemImage: String
 }
 
 struct StopDetailView: View {
     let client: Client
 
     @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var connectivity: ConnectivityViewModel
 
     private let products: [Product] = [
-        Product(name: "Pan Blanco Grande", qty: 12, semaphore: .critical),
-        Product(name: "Pan Integral", qty: 8, semaphore: .warning),
-        Product(name: "Bimbollos", qty: 6, semaphore: .ok)
+        Product(name: "Pan Blanco Grande", qty: 12, semaphore: .critical, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-001")),
+        Product(name: "Pan Integral", qty: 8, semaphore: .warning, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-002")),
+        Product(name: "Bimbollos", qty: 6, semaphore: .ok, systemImage: BimboDemoProductSymbol.systemImage(forSKU: "SKU BIM-003"))
     ]
 
     @State private var showCamera = false
@@ -70,6 +73,14 @@ struct StopDetailView: View {
         .background(AppPalette.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .fullScreenCover(isPresented: $showCamera) {
+            ShelfScannerView { image in
+                capturedImage = image
+                showImagePreview = true
+                showCamera = false
+            }
+            .environmentObject(connectivity)
+        }
         .sheet(isPresented: $showRotateSheet) {
             RotateProductsSheet(initialLines: rotationDraftLines) { result in
                 rotationDraftLines = result
@@ -111,7 +122,7 @@ struct StopDetailView: View {
 
                     Spacer(minLength: 8)
 
-                    BrandLogoButton { authVM.signOut() }
+                    BrandLogoToolbarCluster { authVM.signOut() }
                 }
 
                 NarrationCard()
@@ -168,26 +179,49 @@ struct StopDetailView: View {
                     .stroke(Color.gray.opacity(0.18), lineWidth: 1)
             )
 
-            primaryActionButton(
-                title: "Escanear anaquel",
-                icon: "camera.viewfinder",
-                background: AppPalette.secondaryButtonFill,
-                foreground: AppPalette.mutedButtonForeground,
-                trailingIcon: "chevron.right"
-            ) {
-                showCamera = true
+            if !connectivity.isOffline {
+                primaryActionButton(
+                    title: "Escanear anaquel",
+                    icon: "camera.viewfinder",
+                    background: AppPalette.secondaryButtonFill,
+                    foreground: AppPalette.mutedButtonForeground,
+                    trailingIcon: "chevron.right"
+                ) {
+                    showCamera = true
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.gray.opacity(0.18), lineWidth: 1)
+                )
             }
+
+            NavigationLink {
+                ConfirmarOrdenView(storeName: client.name, lines: ConfirmarOrdenView.previewDemoLines)
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.headline.weight(.bold))
+
+                    Text("Ver preorden")
+                        .font(.headline.weight(.bold))
+
+                    Spacer()
+
+                    Image(systemName: "arrow.right")
+                        .font(.subheadline.weight(.black))
+                }
+                .foregroundStyle(AppPalette.mutedButtonForeground)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 15)
+                .frame(maxWidth: .infinity)
+                .background(AppPalette.secondaryButtonFill)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.gray.opacity(0.18), lineWidth: 1)
             )
-            .fullScreenCover(isPresented: $showCamera) {
-                ShelfScannerView { image in
-                    capturedImage = image
-                    showImagePreview = true
-                    showCamera = false
-                }
-            }
         }
         .padding(.top, 6)
     }
@@ -310,13 +344,14 @@ private struct ProductRow: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [4]))
-                .foregroundStyle(AppPalette.stockQuantity.opacity(0.55))
+                .stroke(Color.gray.opacity(0.22), lineWidth: 1)
+                .background(Color.white)
                 .frame(width: 48, height: 48)
                 .overlay {
-                    Text("ÍCONO")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.85))
+                    Image(systemName: product.systemImage)
+                        .font(.title3)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
                 }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -394,6 +429,7 @@ struct StopDetailView_Previews: PreviewProvider {
                 isSuggestedRotation: true
             ))
             .environmentObject(AuthViewModel())
+            .environmentObject(ConnectivityViewModel())
         }
     }
 }

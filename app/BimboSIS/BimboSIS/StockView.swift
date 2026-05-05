@@ -48,7 +48,7 @@ struct StockView: View {
 
     private var header: some View {
         ScreenHeroHeader(title: "Stock", subtitle: "Inventario disponible en camión") {
-            BrandLogoButton { authVM.signOut() }
+            BrandLogoToolbarCluster { authVM.signOut() }
         }
     }
 
@@ -97,6 +97,10 @@ struct StockView: View {
 private struct StockProductRow: View {
     let item: StockLineItem
 
+    private var symbolName: String {
+        BimboDemoProductSymbol.systemImage(forSKU: item.sku)
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -104,9 +108,10 @@ private struct StockProductRow: View {
                 .background(Color.white)
                 .frame(width: 52, height: 52)
                 .overlay {
-                    Image(systemName: "photo")
+                    Image(systemName: symbolName)
                         .font(.title3)
-                        .foregroundStyle(.tertiary)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
                 }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -149,5 +154,6 @@ struct StockView_Previews: PreviewProvider {
     static var previews: some View {
         StockView()
             .environmentObject(AuthViewModel())
+            .environmentObject(ConnectivityViewModel())
     }
 }

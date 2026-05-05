@@ -97,7 +97,7 @@ struct ConfirmarOrdenView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                BrandLogoButton { authVM.signOut() }
+                BrandLogoToolbarCluster { authVM.signOut() }
             }
         }
     }
@@ -114,7 +114,8 @@ struct ConfirmarOrdenView: View {
                             detail: "\(line.quantity) pzs",
                             quantity: $line.quantity,
                             maxQuantity: line.maxQuantity,
-                            useIconPlaceholder: true
+                            useIconPlaceholder: false,
+                            systemImage: BimboDemoProductSymbol.systemImage(forSKU: line.sku)
                         )
                     }
                 }
@@ -313,5 +314,6 @@ struct ConfirmarOrdenView_Previews: PreviewProvider {
             ConfirmarOrdenView(storeName: "Tienda La Esquina", lines: ConfirmarOrdenView.previewDemoLines)
         }
         .environmentObject(AuthViewModel())
+        .environmentObject(ConnectivityViewModel())
     }
 }

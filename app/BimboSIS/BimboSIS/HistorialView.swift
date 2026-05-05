@@ -66,7 +66,7 @@ struct HistorialView: View {
 
     private var header: some View {
         ScreenHeroHeader(title: "Historial", subtitle: "Pedidos anteriores") {
-            BrandLogoButton { authVM.signOut() }
+            BrandLogoToolbarCluster { authVM.signOut() }
         }
     }
 
@@ -162,5 +162,6 @@ struct HistorialView_Previews: PreviewProvider {
     static var previews: some View {
         HistorialView()
             .environmentObject(AuthViewModel())
+            .environmentObject(ConnectivityViewModel())
     }
 }

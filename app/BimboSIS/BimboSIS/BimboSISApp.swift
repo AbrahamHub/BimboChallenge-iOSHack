@@ -13,6 +13,7 @@ import FirebaseAuth
 @main
 struct BimboSISApp: App {
     @StateObject private var authVM = AuthViewModel()
+    @StateObject private var connectivity = ConnectivityViewModel()
 
     init() {
         FirebaseApp.configure()
@@ -33,13 +34,15 @@ struct BimboSISApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if authVM.isSignedIn {
-                ContentView()
-                    .environmentObject(authVM)
-            } else {
-                AuthView()
-                    .environmentObject(authVM)
+            Group {
+                if authVM.isSignedIn {
+                    ContentView()
+                } else {
+                    AuthView()
+                }
             }
+            .environmentObject(authVM)
+            .environmentObject(connectivity)
         }
         .modelContainer(sharedModelContainer)
     }

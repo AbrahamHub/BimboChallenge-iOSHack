@@ -6,6 +6,8 @@ import UIKit
 struct AuthView: View {
     @EnvironmentObject var auth: AuthViewModel
 
+    private let loginLogoSize: CGFloat = 90
+
     private var platformGroupedBackground: Color {
 #if canImport(UIKit)
         Color(UIColor.systemGroupedBackground)
@@ -31,10 +33,7 @@ struct AuthView: View {
                     Color(red: 3.0 / 255.0, green: 24.0 / 255.0, blue: 80.0 / 255.0)
 
                     VStack(spacing: 8) {
-                        Image("Logo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 90, height: 90)
+                        loginHeaderLogo
                             .padding(.top, 28)
 
                         Text("BimboSIS")
@@ -130,11 +129,41 @@ struct AuthView: View {
             Text(auth.errorMessage ?? "")
         }
     }
+
+    /// Usa `Assets.xcassets/Logo` si hay una imagen usable; si no, la marca vectorial alineada al resto de la app.
+    @ViewBuilder
+    private var loginHeaderLogo: some View {
+#if canImport(UIKit)
+        if let ui = UIImage(named: "Logo"), ui.size.width >= 48, ui.size.height >= 48 {
+            Image(uiImage: ui)
+                .resizable()
+                .scaledToFit()
+                .frame(width: loginLogoSize, height: loginLogoSize)
+        } else {
+            loginBrandMarkFallback
+        }
+#else
+        loginBrandMarkFallback
+#endif
+    }
+
+    private var loginBrandMarkFallback: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(Color.white)
+            .frame(width: loginLogoSize, height: loginLogoSize)
+            .overlay {
+                Text("B")
+                    .font(.system(size: loginLogoSize * 0.44, weight: .heavy))
+                    .foregroundStyle(AppPalette.brandRed)
+            }
+    }
 }
 
 struct AuthView_Previews: PreviewProvider {
     static var previews: some View {
-        AuthView().environmentObject(AuthViewModel())
+        AuthView()
+            .environmentObject(AuthViewModel())
+            .environmentObject(ConnectivityViewModel())
     }
 }
 
