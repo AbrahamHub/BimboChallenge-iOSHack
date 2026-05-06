@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Línea de pedido editable antes de enviar al ERP (cantidad acotada por inventario en camión).
 struct ConfirmarOrdenLine: Identifiable {
@@ -10,8 +11,7 @@ struct ConfirmarOrdenLine: Identifiable {
     let unitPrice: Decimal
 }
 
-/// Pantalla **Confirmar Orden**: revisión con steppers, resumen y envío al ERP (modal de confirmación).
-/// Enlázala desde navegación cuando corresponda; por ahora solo incluye `Preview` de uso.
+/// Pantalla **Confirmar Orden** (preorden): edición con steppers; **Aceptar** lleva al **Carrito**, donde está el envío al ERP y el modal.
 struct ConfirmarOrdenView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var authVM: AuthViewModel
@@ -19,9 +19,8 @@ struct ConfirmarOrdenView: View {
     let storeName: String
     @State private var lines: [ConfirmarOrdenLine]
 
-    /// Se muestra al pulsar «Enviar orden al ERP».
-    @State private var showERPConfirmModal = false
-    /// Después de confirmar en el modal (demo: puedes enlazar API).
+    @State private var goToCart = false
+    /// Después de confirmar en el modal del **Carrito** (demo: puedes enlazar API).
     var onERPSubmit: (([ConfirmarOrdenLine], Decimal) -> Void)?
 
     init(
@@ -59,47 +58,34 @@ struct ConfirmarOrdenView: View {
     }
 
     var body: some View {
-        ZStack {
-            mainScroll
-
-            if showERPConfirmModal {
-                ConfirmarEnvioERPModal(
-                    storeName: storeName,
-                    productCount: productCount,
-                    totalPieces: totalPieces,
-                    totalFormatted: orderTotalFormatted,
-                    onCancel: { showERPConfirmModal = false },
-                    onConfirm: {
-                        showERPConfirmModal = false
-                        let snapshot = lines.map(Self.clamped)
-                        onERPSubmit?(snapshot, orderTotal)
+        mainScroll
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Confirmar Orden")
+            .toolbarBackground(AppPalette.navy, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    ToolbarSFIconButton(
+                        systemName: "chevron.left",
+                        fontSize: 22,
+                        foreground: .white,
+                        accessibilityLabelText: "Volver"
+                    ) {
+                        dismiss()
                     }
-                )
-                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                .zIndex(1)
-            }
-        }
-        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showERPConfirmModal)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("Confirmar Orden")
-        .toolbarBackground(AppPalette.navy, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                ToolbarSFIconButton(
-                    systemName: "chevron.left",
-                    fontSize: 22,
-                    foreground: .white,
-                    accessibilityLabelText: "Volver"
-                ) {
-                    dismiss()
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    BrandLogoToolbarCluster { authVM.signOut() }
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                BrandLogoToolbarCluster { authVM.signOut() }
+            .navigationDestination(isPresented: $goToCart) {
+                CarritoOrdenView(
+                    storeName: storeName,
+                    lines: lines.map(Self.clamped),
+                    onERPSubmit: onERPSubmit
+                )
             }
-        }
     }
 
     private var mainScroll: some View {
@@ -185,9 +171,9 @@ struct ConfirmarOrdenView: View {
     private var sendBar: some View {
         Button {
             guard totalPieces > 0 else { return }
-            showERPConfirmModal = true
+            goToCart = true
         } label: {
-            Text("Enviar orden al ERP")
+            Text("Aceptar")
                 .font(.headline.weight(.bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
@@ -204,9 +190,205 @@ struct ConfirmarOrdenView: View {
     }
 }
 
+// MARK: - Carrito (resumen + modal ERP → menú principal)
+
+struct CarritoOrdenView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var routeSession: RouteSessionController
+
+    let storeName: String
+    @State private var lines: [ConfirmarOrdenLine]
+
+    @State private var showERPConfirmModal = false
+    var onERPSubmit: (([ConfirmarOrdenLine], Decimal) -> Void)?
+
+    init(
+        storeName: String,
+        lines: [ConfirmarOrdenLine],
+        onERPSubmit: (([ConfirmarOrdenLine], Decimal) -> Void)? = nil
+    ) {
+        self.storeName = storeName
+        _lines = State(initialValue: lines.map { Self.clamp($0) })
+        self.onERPSubmit = onERPSubmit
+    }
+
+    private static func clamp(_ line: ConfirmarOrdenLine) -> ConfirmarOrdenLine {
+        var copy = line
+        copy.quantity = min(max(0, copy.quantity), copy.maxQuantity)
+        return copy
+    }
+
+    private var productCount: Int {
+        lines.filter { $0.quantity > 0 }.count
+    }
+
+    private var totalPieces: Int {
+        lines.reduce(into: 0) { $0 += $1.quantity }
+    }
+
+    private var orderTotal: Decimal {
+        lines.reduce(into: Decimal(0)) { partial, line in
+            partial += Decimal(line.quantity) * line.unitPrice
+        }
+    }
+
+    private var orderTotalFormatted: String {
+        orderTotal.formatted(.currency(code: "MXN").locale(Locale(identifier: "es_MX")))
+    }
+
+    var body: some View {
+        ZStack {
+            carritoScroll
+
+            if showERPConfirmModal {
+                ConfirmarEnvioERPModal(
+                    storeName: storeName,
+                    productCount: productCount,
+                    totalPieces: totalPieces,
+                    totalFormatted: orderTotalFormatted,
+                    onCancel: { showERPConfirmModal = false },
+                    onConfirm: {
+                        showERPConfirmModal = false
+                        let snapshot = lines.map(Self.clamp)
+                        onERPSubmit?(snapshot, orderTotal)
+                        routeSession.completePurchaseAndReturnToMainMenu()
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(1)
+            }
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showERPConfirmModal)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Carrito")
+        .toolbarBackground(AppPalette.navy, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                ToolbarSFIconButton(
+                    systemName: "chevron.left",
+                    fontSize: 22,
+                    foreground: .white,
+                    accessibilityLabelText: "Volver a preorden"
+                ) {
+                    dismiss()
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                BrandLogoToolbarCluster { authVM.signOut() }
+            }
+        }
+    }
+
+    private var carritoScroll: some View {
+        ScrollView(showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(storeName)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("\(productCount) productos · \(totalPieces) piezas")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(orderTotalFormatted)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(AppPalette.navy)
+                        .padding(.top, 4)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color.white)
+
+                LazyVStack(spacing: 10) {
+                    ForEach(lines.filter { $0.quantity > 0 }) { line in
+                        carritoLineRow(line)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+                Color.clear.frame(height: 120)
+            }
+        }
+        .background(AppPalette.background.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button {
+                guard totalPieces > 0 else { return }
+                showERPConfirmModal = true
+            } label: {
+                Text("Enviar orden al ERP")
+                    .font(.headline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .foregroundStyle(.white)
+                    .background(AppPalette.brandRed)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(totalPieces == 0)
+            .opacity(totalPieces == 0 ? 0.45 : 1)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(AppPalette.background)
+        }
+    }
+
+    private func carritoLineRow(_ line: ConfirmarOrdenLine) -> some View {
+        HStack(spacing: 12) {
+            productThumb(sku: line.sku)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(line.name)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppPalette.navy)
+                    .lineLimit(2)
+                Text("\(line.quantity) pzs · \(lineSubtotal(line).formatted(.currency(code: "MXN").locale(Locale(identifier: "es_MX"))))")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(12)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.gray.opacity(0.14), lineWidth: 1)
+        )
+    }
+
+    private func lineSubtotal(_ line: ConfirmarOrdenLine) -> Decimal {
+        Decimal(line.quantity) * line.unitPrice
+    }
+
+    @ViewBuilder
+    private func productThumb(sku: String) -> some View {
+        let name = BimboDemoProductSymbol.assetName(forSKU: sku)
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            .background(Color.white)
+            .frame(width: 52, height: 52)
+            .overlay {
+                if let name, let img = UIImage(named: name) {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(6)
+                } else {
+                    Image(systemName: BimboDemoProductSymbol.systemImage(forSKU: sku))
+                        .font(.title3)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(AppPalette.stockQuantity.opacity(0.95))
+                }
+            }
+    }
+}
+
 // MARK: - Modal confirmación ERP
 
-private struct ConfirmarEnvioERPModal: View {
+struct ConfirmarEnvioERPModal: View {
     let storeName: String
     let productCount: Int
     let totalPieces: Int
@@ -316,5 +498,17 @@ struct ConfirmarOrdenView_Previews: PreviewProvider {
         }
         .environmentObject(AuthViewModel())
         .environmentObject(ConnectivityViewModel())
+        .environmentObject(RouteSessionController())
+    }
+}
+
+struct CarritoOrdenView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationStack {
+            CarritoOrdenView(storeName: "Tienda La Esquina", lines: ConfirmarOrdenView.previewDemoLines)
+        }
+        .environmentObject(AuthViewModel())
+        .environmentObject(ConnectivityViewModel())
+        .environmentObject(RouteSessionController())
     }
 }

@@ -26,6 +26,7 @@ struct MainRouteView: View {
     ]
 
     @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var routeSession: RouteSessionController
     @State private var showNextStop = false
     @State private var routeStarted = false
 
@@ -47,6 +48,14 @@ struct MainRouteView: View {
                 StopDetailView(client: nextClient, onComplete: {
                     completeClient(nextClient)
                 })
+            }
+            .onAppear {
+                routeSession.onExitFlowToMainMenu = {
+                    showNextStop = false
+                }
+            }
+            .onDisappear {
+                routeSession.onExitFlowToMainMenu = nil
             }
         }
     }
@@ -99,6 +108,9 @@ struct MainRouteView: View {
                             ClientStopRow(client: client)
                         }
                         .buttonStyle(.plain)
+                        .simultaneousGesture(TapGesture().onEnded {
+                            routeSession.beginDeliveryFlow()
+                        })
                     } else {
                         ClientStopRow(client: client)
                             .allowsHitTesting(false)
@@ -108,7 +120,7 @@ struct MainRouteView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 68)
-        .padding(.bottom, 168)
+        .padding(.bottom, routeSession.hidesMainTabBar ? 100 : 168)
     }
 
     private let simulatedCoordinates: [CLLocationCoordinate2D] = [
@@ -127,6 +139,7 @@ struct MainRouteView: View {
     var continueButton: some View {
         VStack(spacing: 10) {
             Button {
+                routeSession.beginDeliveryFlow()
                 routeStarted = true
                 showNextStop = true
             } label: {
@@ -141,6 +154,7 @@ struct MainRouteView: View {
             .buttonStyle(.plain)
 
             Button {
+                routeSession.beginDeliveryFlow()
                 showNextStop = true
             } label: {
                 Text("Continuar Recorrido")
@@ -473,5 +487,6 @@ struct MainRouteView_Previews: PreviewProvider {
         MainRouteView()
             .environmentObject(AuthViewModel())
             .environmentObject(ConnectivityViewModel())
+            .environmentObject(RouteSessionController())
     }
 }

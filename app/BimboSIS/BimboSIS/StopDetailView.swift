@@ -37,7 +37,6 @@ struct StopDetailView: View {
     @State private var showImagePreview = false
     @Environment(\.dismiss) private var dismiss
     @State private var showRotateSheet = false
-    @State private var showConfirmOrder = false
     @State private var isAnalyzing = false
     /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
     @State private var confirmedRotationPieces = 0
@@ -97,12 +96,6 @@ struct StopDetailView: View {
                 rotationDraftLines = result
                 confirmedRotationPieces = result.reduce(into: 0) { $0 += $1.rotatingQty }
             }
-        }
-        .navigationDestination(isPresented: $showConfirmOrder) {
-            ConfirmarOrdenView(
-                storeName: client.name,
-                lines: ConfirmarOrdenView.previewDemoLines
-            )
         }
         .overlay {
             if isAnalyzing {
@@ -477,6 +470,7 @@ struct StopDetailView_Previews: PreviewProvider {
             ))
             .environmentObject(AuthViewModel())
             .environmentObject(ConnectivityViewModel())
+            .environmentObject(RouteSessionController())
         }
     }
 }

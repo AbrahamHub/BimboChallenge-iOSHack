@@ -14,6 +14,7 @@ import FirebaseAuth
 struct BimboSISApp: App {
     @StateObject private var authVM = AuthViewModel()
     @StateObject private var connectivity = ConnectivityViewModel()
+    @StateObject private var routeSession = RouteSessionController()
 
     init() {
         FirebaseApp.configure()
@@ -43,6 +44,7 @@ struct BimboSISApp: App {
             }
             .environmentObject(authVM)
             .environmentObject(connectivity)
+            .environmentObject(routeSession)
         }
         .modelContainer(sharedModelContainer)
     }
