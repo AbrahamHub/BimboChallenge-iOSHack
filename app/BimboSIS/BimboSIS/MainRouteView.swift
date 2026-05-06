@@ -51,19 +51,22 @@ struct MainRouteView: View {
                     })
                 }
             }
-            .onAppear {
-                routeSession.onExitFlowToMainMenu = { storeName in
-                    if let storeName,
-                       let client = clients.first(where: { $0.name == storeName }) {
-                        completeClient(client)
-                    }
-                    presentedStopID = nil
+            .onChange(of: routeSession.pendingFinalizeVisitStoreName) { _, storeName in
+                guard let storeName, !storeName.isEmpty else { return }
+                if let client = clients.first(where: { routeStoreNamesMatch($0.name, storeName) }) {
+                    completeClient(client)
                 }
-            }
-            .onDisappear {
-                routeSession.onExitFlowToMainMenu = nil
+                presentedStopID = nil
+                routeSession.clearPendingFinalizeVisit()
             }
         }
+    }
+
+    /// Coincide nombres de tienda aunque cambien espacios o mayúsculas (evita fallos al cerrar el ciclo ERP).
+    private func routeStoreNamesMatch(_ a: String, _ b: String) -> Bool {
+        let x = a.trimmingCharacters(in: .whitespacesAndNewlines)
+        let y = b.trimmingCharacters(in: .whitespacesAndNewlines)
+        return x.caseInsensitiveCompare(y) == .orderedSame
     }
 
     var header: some View {
@@ -178,9 +181,9 @@ struct MainRouteView: View {
         clients.first(where: { $0.status == .next }) ?? clients[0]
     }
     
+    /// Marca la parada como **ATENDIDA** (`complete`) y la primera **PENDIENTE** en lista pasa a **SIGUIENTE** (próxima a atender).
     private func completeClient(_ client: Client) {
         guard let index = clients.firstIndex(where: { $0.id == client.id }) else { return }
-        // Evita doble promoción si ya se marcó atendida (p. ej. entrega + envío ERP).
         guard clients[index].status != .complete else { return }
         clients[index].status = .complete
 
