@@ -61,6 +61,7 @@ struct ContentView: View {
 }
 
 struct BottomTabView: View {
+    @EnvironmentObject private var routeSession: RouteSessionController
     @State private var tab: MainTab = .route
 
     var body: some View {
@@ -76,7 +77,9 @@ struct BottomTabView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            MainTabBar(selection: $tab)
+            if !routeSession.hidesMainTabBar {
+                MainTabBar(selection: $tab)
+            }
         }
         .tint(AppPalette.brandRed)
     }
@@ -122,6 +125,9 @@ private struct MainTabBar: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView().environmentObject(AuthViewModel())
+        ContentView()
+            .environmentObject(AuthViewModel())
+            .environmentObject(ConnectivityViewModel())
+            .environmentObject(RouteSessionController())
     }
 }

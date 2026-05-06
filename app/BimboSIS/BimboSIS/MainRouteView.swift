@@ -26,6 +26,7 @@ struct MainRouteView: View {
     ]
 
     @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var routeSession: RouteSessionController
     @State private var showNextStop = false
     @State private var routeStarted = false
 
@@ -47,6 +48,14 @@ struct MainRouteView: View {
                 StopDetailView(client: nextClient, onComplete: {
                     completeClient(nextClient)
                 })
+            }
+            .onAppear {
+                routeSession.onExitFlowToMainMenu = {
+                    showNextStop = false
+                }
+            }
+            .onDisappear {
+                routeSession.onExitFlowToMainMenu = nil
             }
         }
     }
@@ -90,9 +99,7 @@ struct MainRouteView: View {
         VStack(spacing: 12) {
             ForEach(clients) { client in
                 Group {
-                    if client.status == .complete {
-                        ClientStopRow(client: client)
-                    } else {
+                    if client.status == .next {
                         NavigationLink {
                             StopDetailView(client: client, onComplete: {
                                 completeClient(client)
@@ -100,14 +107,20 @@ struct MainRouteView: View {
                         } label: {
                             ClientStopRow(client: client)
                         }
+                        .buttonStyle(.plain)
+                        .simultaneousGesture(TapGesture().onEnded {
+                            routeSession.beginDeliveryFlow()
+                        })
+                    } else {
+                        ClientStopRow(client: client)
+                            .allowsHitTesting(false)
                     }
                 }
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.top, 68)
-        .padding(.bottom, 168)
+        .padding(.bottom, routeSession.hidesMainTabBar ? 100 : 168)
     }
 
     private let simulatedCoordinates: [CLLocationCoordinate2D] = [
@@ -126,19 +139,22 @@ struct MainRouteView: View {
     var continueButton: some View {
         VStack(spacing: 10) {
             Button {
+                routeSession.beginDeliveryFlow()
                 routeStarted = true
+                showNextStop = true
             } label: {
                 Text("Comenzar Ruta")
                     .font(.headline.weight(.bold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(AppPalette.navy)
-                    .background(AppPalette.secondaryButtonFill)
+                    .padding(.vertical, 16)
+                    .foregroundStyle(.white)
+                    .background(AppPalette.brandRed)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.plain)
 
             Button {
+                routeSession.beginDeliveryFlow()
                 showNextStop = true
             } label: {
                 Text("Continuar Recorrido")
@@ -234,6 +250,18 @@ private struct ClientStopRow: View {
         client.status == .complete
     }
 
+    /// Pendientes que aún no son la parada activa (no clicables).
+    private var isLockedPending: Bool {
+        client.status == .pending
+    }
+
+    private var titleForeground: Color {
+        if isCompleted || isLockedPending {
+            return Color.secondary
+        }
+        return Color.primary
+    }
+
     var body: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
@@ -243,7 +271,7 @@ private struct ClientStopRow: View {
                     HStack(spacing: 8) {
                         Text(client.name)
                             .font(.headline.weight(.semibold))
-                            .foregroundStyle(isCompleted ? Color.secondary : Color.primary)
+                            .foregroundStyle(titleForeground)
                             .lineLimit(1)
 
                         if client.status == .next {
@@ -266,6 +294,15 @@ private struct ClientStopRow: View {
                             .font(.caption.weight(.heavy))
                             .tracking(0.4)
                             .foregroundStyle(AppPalette.semaphoreGreenText)
+                    } else if isLockedPending {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(client.pieces)")
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(Color.secondary.opacity(0.85))
+                            Text("PZS")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
                     } else {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("\(client.pieces)")
@@ -306,7 +343,7 @@ private struct ClientStopRow: View {
                     lineWidth: 1
                 )
         )
-        .opacity(isCompleted ? 0.92 : 1)
+        .opacity(isCompleted ? 0.92 : (isLockedPending ? 0.78 : 1))
         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
 
@@ -450,5 +487,6 @@ struct MainRouteView_Previews: PreviewProvider {
         MainRouteView()
             .environmentObject(AuthViewModel())
             .environmentObject(ConnectivityViewModel())
+            .environmentObject(RouteSessionController())
     }
 }
