@@ -73,6 +73,7 @@ struct ConfirmarOrdenView: View {
                         showERPConfirmModal = false
                         let snapshot = lines.map(Self.clamped)
                         onERPSubmit?(snapshot, orderTotal)
+                        dismiss()
                     }
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.96)))
@@ -80,6 +81,7 @@ struct ConfirmarOrdenView: View {
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showERPConfirmModal)
+        .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("Confirmar Orden")
         .toolbarBackground(AppPalette.navy, for: .navigationBar)
@@ -187,7 +189,7 @@ struct ConfirmarOrdenView: View {
             guard totalPieces > 0 else { return }
             showERPConfirmModal = true
         } label: {
-            Text("Enviar orden al ERP")
+            Text("Confirmar y Enviar Orden")
                 .font(.headline.weight(.bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
@@ -231,7 +233,7 @@ private struct ConfirmarEnvioERPModal: View {
                             .foregroundStyle(.black)
                     }
 
-                    Text("Confirmar envío al ERP")
+                    Text("Confirmar y Finalizar Visita")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)

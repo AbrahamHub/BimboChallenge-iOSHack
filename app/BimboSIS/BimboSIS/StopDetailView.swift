@@ -102,7 +102,10 @@ struct StopDetailView: View {
             ConfirmarOrdenView(
                 storeName: client.name,
                 lines: ConfirmarOrdenView.previewDemoLines
-            )
+            ) { _, _ in
+                onComplete?()
+                dismiss()
+            }
         }
         .overlay {
             if isAnalyzing {
@@ -236,7 +239,10 @@ struct StopDetailView: View {
             }
 
             NavigationLink {
-                ConfirmarOrdenView(storeName: client.name, lines: ConfirmarOrdenView.previewDemoLines)
+                ConfirmarOrdenView(storeName: client.name, lines: ConfirmarOrdenView.previewDemoLines) { _, _ in
+                    onComplete?()
+                    dismiss()
+                }
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "doc.text.fill")
