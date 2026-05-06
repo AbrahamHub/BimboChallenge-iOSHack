@@ -58,50 +58,8 @@ struct ConfirmarOrdenView: View {
     }
 
     var body: some View {
-        ZStack {
-            mainScroll
-
-            if showERPConfirmModal {
-                ConfirmarEnvioERPModal(
-                    storeName: storeName,
-                    productCount: productCount,
-                    totalPieces: totalPieces,
-                    totalFormatted: orderTotalFormatted,
-                    onCancel: { showERPConfirmModal = false },
-                    onConfirm: {
-                        showERPConfirmModal = false
-                        let snapshot = lines.map(Self.clamped)
-                        onERPSubmit?(snapshot, orderTotal)
-                        dismiss()
-                    }
-                )
-                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                .zIndex(1)
-            }
-        }
-        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showERPConfirmModal)
-        .navigationBarBackButtonHidden(true)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("Confirmar Orden")
-        .toolbarBackground(AppPalette.navy, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                ToolbarSFIconButton(
-                    systemName: "chevron.left",
-                    fontSize: 22,
-                    foreground: .white,
-                    accessibilityLabelText: "Volver"
-                ) {
-                    dismiss()
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                BrandLogoToolbarCluster { authVM.signOut() }
-            }
-        }
         mainScroll
+            .navigationBarBackButtonHidden(true)
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Confirmar Orden")
             .toolbarBackground(AppPalette.navy, for: .navigationBar)
@@ -216,7 +174,6 @@ struct ConfirmarOrdenView: View {
             guard totalPieces > 0 else { return }
             goToCart = true
         } label: {
-            Text("Confirmar y Enviar Orden")
             Text("Aceptar")
                 .font(.headline.weight(.bold))
                 .frame(maxWidth: .infinity)

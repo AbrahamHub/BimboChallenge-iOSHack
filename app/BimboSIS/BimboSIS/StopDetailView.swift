@@ -37,6 +37,7 @@ struct StopDetailView: View {
     @State private var showImagePreview = false
     @Environment(\.dismiss) private var dismiss
     @State private var showRotateSheet = false
+    @State private var showConfirmOrder = false
     @State private var isAnalyzing = false
     /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
     @State private var confirmedRotationPieces = 0
