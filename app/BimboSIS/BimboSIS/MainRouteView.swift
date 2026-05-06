@@ -1,8 +1,7 @@
 import SwiftUI
 import MapKit
 
-struct Client: Identifiable, Equatable 
-{
+struct Client: Identifiable, Equatable {
     let id = UUID()
     let name: String
     let address: String
@@ -27,7 +26,8 @@ struct MainRouteView: View {
 
     @EnvironmentObject private var authVM: AuthViewModel
     @EnvironmentObject private var routeSession: RouteSessionController
-    @State private var showNextStop = false
+    /// Identificador del detalle de parada mostrado (`UUID` estable para `navigationDestination` al cambiar el estado del cliente).
+    @State private var presentedStopID: UUID?
     @State private var routeStarted = false
 
     var body: some View {
@@ -44,14 +44,20 @@ struct MainRouteView: View {
                 continueButton
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(isPresented: $showNextStop) {
-                StopDetailView(client: nextClient, onComplete: {
-                    completeClient(nextClient)
-                })
+            .navigationDestination(item: $presentedStopID) { stopID in
+                if let client = clients.first(where: { $0.id == stopID }) {
+                    StopDetailView(client: client, onComplete: {
+                        completeClient(client)
+                    })
+                }
             }
             .onAppear {
-                routeSession.onExitFlowToMainMenu = {
-                    showNextStop = false
+                routeSession.onExitFlowToMainMenu = { storeName in
+                    if let storeName,
+                       let client = clients.first(where: { $0.name == storeName }) {
+                        completeClient(client)
+                    }
+                    presentedStopID = nil
                 }
             }
             .onDisappear {
@@ -91,7 +97,7 @@ struct MainRouteView: View {
             }
             .padding(.horizontal, BimboLayout.heroHorizontalPadding)
             .padding(.top, BimboLayout.routeHeroTopPadding)
-            .padding(.bottom, 2)
+            .padding(.bottom, 0)
         }
     }
 
@@ -100,17 +106,13 @@ struct MainRouteView: View {
             ForEach(clients) { client in
                 Group {
                     if client.status == .next {
-                        NavigationLink {
-                            StopDetailView(client: client, onComplete: {
-                                completeClient(client)
-                            })
+                        Button {
+                            routeSession.beginDeliveryFlow()
+                            presentedStopID = client.id
                         } label: {
                             ClientStopRow(client: client)
                         }
                         .buttonStyle(.plain)
-                        .simultaneousGesture(TapGesture().onEnded {
-                            routeSession.beginDeliveryFlow()
-                        })
                     } else {
                         ClientStopRow(client: client)
                             .allowsHitTesting(false)
@@ -119,7 +121,7 @@ struct MainRouteView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 68)
+        .padding(.top, 56)
         .padding(.bottom, routeSession.hidesMainTabBar ? 100 : 168)
     }
 
@@ -141,7 +143,7 @@ struct MainRouteView: View {
             Button {
                 routeSession.beginDeliveryFlow()
                 routeStarted = true
-                showNextStop = true
+                presentedStopID = nextClient.id
             } label: {
                 Text("Comenzar Ruta")
                     .font(.headline.weight(.bold))
@@ -155,7 +157,7 @@ struct MainRouteView: View {
 
             Button {
                 routeSession.beginDeliveryFlow()
-                showNextStop = true
+                presentedStopID = nextClient.id
             } label: {
                 Text("Continuar Recorrido")
                     .font(.headline.weight(.bold))

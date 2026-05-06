@@ -6,19 +6,20 @@ import SwiftUI
 final class RouteSessionController: ObservableObject {
     @Published private(set) var hidesMainTabBar: Bool = false
 
-    /// Lo asigna `MainRouteView` para cerrar el `NavigationStack` del recorrido.
-    var onExitFlowToMainMenu: (() -> Void)?
+    /// Lo asigna `MainRouteView`: recibe el nombre de tienda para marcar **atendida** y cerrar el detalle de parada.
+    var onExitFlowToMainMenu: ((String?) -> Void)?
 
     func beginDeliveryFlow() {
         guard !hidesMainTabBar else { return }
         hidesMainTabBar = true
     }
 
-    func completePurchaseAndReturnToMainMenu() {
+    /// Tras confirmar en el modal ERP del **Carrito**: restaura tabs, marca la tienda y vuelve a **Mi Ruta** en un solo paso.
+    func completePurchaseAndReturnToMainMenu(storeName: String?) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.hidesMainTabBar = false
-            self.onExitFlowToMainMenu?()
+            self.onExitFlowToMainMenu?(storeName)
         }
     }
 }

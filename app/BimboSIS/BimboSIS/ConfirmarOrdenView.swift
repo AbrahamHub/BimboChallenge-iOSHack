@@ -174,8 +174,11 @@ struct ConfirmarOrdenView: View {
             guard totalPieces > 0 else { return }
             goToCart = true
         } label: {
-            Text("Aceptar")
+            Text("Continuar al carrito")
                 .font(.headline.weight(.bold))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .foregroundStyle(.white)
@@ -253,7 +256,7 @@ struct CarritoOrdenView: View {
                         showERPConfirmModal = false
                         let snapshot = lines.map(Self.clamp)
                         onERPSubmit?(snapshot, orderTotal)
-                        routeSession.completePurchaseAndReturnToMainMenu()
+                        routeSession.completePurchaseAndReturnToMainMenu(storeName: storeName)
                     }
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.96)))

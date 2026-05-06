@@ -37,7 +37,6 @@ struct StopDetailView: View {
     @State private var showImagePreview = false
     @Environment(\.dismiss) private var dismiss
     @State private var showRotateSheet = false
-    @State private var showConfirmOrder = false
     @State private var isAnalyzing = false
     /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
     @State private var confirmedRotationPieces = 0
@@ -98,15 +97,6 @@ struct StopDetailView: View {
                 confirmedRotationPieces = result.reduce(into: 0) { $0 += $1.rotatingQty }
             }
         }
-        .navigationDestination(isPresented: $showConfirmOrder) {
-            ConfirmarOrdenView(
-                storeName: client.name,
-                lines: ConfirmarOrdenView.previewDemoLines
-            ) { _, _ in
-                onComplete?()
-                dismiss()
-            }
-        }
         .overlay {
             if isAnalyzing {
                 analysisOverlay
@@ -135,7 +125,7 @@ struct StopDetailView: View {
     private var stopHeader: some View {
         ZStack(alignment: .bottom) {
             AppPalette.navy
-                .frame(height: 198)
+                .frame(height: 176)
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .ignoresSafeArea(edges: .top)
 
@@ -239,10 +229,7 @@ struct StopDetailView: View {
             }
 
             NavigationLink {
-                ConfirmarOrdenView(storeName: client.name, lines: ConfirmarOrdenView.previewDemoLines) { _, _ in
-                    onComplete?()
-                    dismiss()
-                }
+                ConfirmarOrdenView(storeName: client.name, lines: ConfirmarOrdenView.previewDemoLines)
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "doc.text.fill")
