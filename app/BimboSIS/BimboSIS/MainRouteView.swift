@@ -179,13 +179,13 @@ struct MainRouteView: View {
     }
     
     private func completeClient(_ client: Client) {
-        if let index = clients.firstIndex(where: { $0.id == client.id }) {
-            clients[index].status = .complete
-            
-            // Find the next pending client and make it next
-            if let nextIndex = clients.firstIndex(where: { $0.status == .pending }) {
-                clients[nextIndex].status = .next
-            }
+        guard let index = clients.firstIndex(where: { $0.id == client.id }) else { return }
+        // Evita doble promoción si ya se marcó atendida (p. ej. entrega + envío ERP).
+        guard clients[index].status != .complete else { return }
+        clients[index].status = .complete
+
+        if let nextIndex = clients.firstIndex(where: { $0.status == .pending }) {
+            clients[nextIndex].status = .next
         }
     }
 }

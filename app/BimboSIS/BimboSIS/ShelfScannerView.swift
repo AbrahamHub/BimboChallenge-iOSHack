@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import UIKit
 
 struct ShelfScannerView: View {
     @Environment(\.dismiss) private var dismiss
@@ -165,7 +166,7 @@ struct ShelfScannerView: View {
                         dismiss()
                     } label: {
                         HStack {
-                            Text("Finalizar y generar acomodo")
+                            Text("Ir a preorden")
                             Image(systemName: "arrow.right")
                         }
                         .font(.headline.weight(.bold))
@@ -323,10 +324,19 @@ private struct CameraPreviewLayer: UIViewRepresentable {
         let view = PreviewView()
         view.videoPreviewLayer.session = session
         view.videoPreviewLayer.videoGravity = .resizeAspectFill
+        applyPortraitOrientation(to: view.videoPreviewLayer)
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: UIView, context: Context) {
+        guard let preview = uiView as? PreviewView else { return }
+        applyPortraitOrientation(to: preview.videoPreviewLayer)
+    }
+
+    private func applyPortraitOrientation(to layer: AVCaptureVideoPreviewLayer) {
+        guard let conn = layer.connection, conn.isVideoOrientationSupported else { return }
+        conn.videoOrientation = .portrait
+    }
 }
 
 private final class PreviewView: UIView {
@@ -390,6 +400,9 @@ final class ShelfCameraModel: NSObject, ObservableObject {
             self.session.addInput(input)
             self.session.addOutput(self.output)
             self.session.commitConfiguration()
+            if let conn = self.output.connection(with: .video), conn.isVideoOrientationSupported {
+                conn.videoOrientation = .portrait
+            }
             self.configured = true
         }
     }
@@ -422,18 +435,19 @@ final class ShelfCameraModel: NSObject, ObservableObject {
 
 extension ShelfCameraModel: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard error == nil, let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else { return }
-        
+        guard error == nil, let data = photo.fileDataRepresentation(), let raw = UIImage(data: data) else { return }
+        let image = raw.bimboNormalizedUpOrientation()
+
         Task {
             do {
                 let processedImage = try await ShelfImageProcessor.shared.processImage(image)
                 await MainActor.run {
-                    self.capturedImage = processedImage
+                    self.capturedImage = processedImage.bimboNormalizedUpOrientation()
                 }
             } catch {
                 print("Error al procesar la imagen: \(error.localizedDescription)")
                 await MainActor.run {
-                    self.capturedImage = image // Fallback a la imagen original
+                    self.capturedImage = image
                 }
             }
         }

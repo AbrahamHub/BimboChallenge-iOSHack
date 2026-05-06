@@ -17,6 +17,8 @@ struct ConfirmarOrdenView: View {
     @EnvironmentObject private var authVM: AuthViewModel
 
     let storeName: String
+    /// Imagen del anaquel (p. ej. tras escanear); va **arriba** del contenido de la preorden.
+    let shelfCaptureImage: UIImage?
     @State private var lines: [ConfirmarOrdenLine]
 
     @State private var goToCart = false
@@ -26,9 +28,11 @@ struct ConfirmarOrdenView: View {
     init(
         storeName: String,
         lines: [ConfirmarOrdenLine],
+        shelfCaptureImage: UIImage? = nil,
         onERPSubmit: (([ConfirmarOrdenLine], Decimal) -> Void)? = nil
     ) {
         self.storeName = storeName
+        self.shelfCaptureImage = shelfCaptureImage
         _lines = State(initialValue: lines.map(Self.clamped))
         self.onERPSubmit = onERPSubmit
     }
@@ -92,6 +96,8 @@ struct ConfirmarOrdenView: View {
     private var mainScroll: some View {
         ScrollView(showsIndicators: true) {
             VStack(alignment: .leading, spacing: 0) {
+                shelfCaptureBanner
+
                 storeHeaderBlock
 
                 LazyVStack(spacing: 12) {
@@ -120,6 +126,35 @@ struct ConfirmarOrdenView: View {
         .background(AppPalette.background.ignoresSafeArea())
         .safeAreaInset(edge: .bottom, spacing: 0) {
             sendBar
+        }
+    }
+
+    @ViewBuilder
+    private var shelfCaptureBanner: some View {
+        if let img = shelfCaptureImage {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Foto del anaquel")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.55)
+
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .frame(maxHeight: 280)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.gray.opacity(0.14), lineWidth: 1)
+                    )
+                    .accessibilityLabel(Text("Fotografía capturada del anaquel"))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+            .background(Color.white)
         }
     }
 
@@ -264,6 +299,7 @@ struct CarritoOrdenView: View {
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showERPConfirmModal)
+        .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("Carrito")
         .toolbarBackground(AppPalette.navy, for: .navigationBar)
@@ -303,7 +339,7 @@ struct CarritoOrdenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.vertical, 10)
                 .background(Color.white)
 
                 LazyVStack(spacing: 10) {

@@ -14,8 +14,11 @@ actor ShelfImageProcessor {
     private let context = CIContext(options: nil)
     
     func processImage(_ image: UIImage) async throws -> UIImage {
+        // CGImage / Vision ignoran `imageOrientation`; normalizamos a `.up` antes de procesar.
+        let normalized = image.bimboNormalizedUpOrientation()
+
         // 1. Convert to CIImage
-        guard let cgImage = image.cgImage else {
+        guard let cgImage = normalized.cgImage else {
             throw ImageProcessorError.conversionFailed
         }
         
@@ -32,10 +35,7 @@ actor ShelfImageProcessor {
             throw ImageProcessorError.processingFailed
         }
         
-        // Maintain original orientation if no perspective correction was applied, 
-        // otherwise reset to .up since the CIImage pipeline fixes orientation natively.
-        let orientation = rectangle == nil ? image.imageOrientation : .up
-        let finalImage = UIImage(cgImage: finalCGImage, scale: image.scale, orientation: orientation)
+        let finalImage = UIImage(cgImage: finalCGImage, scale: normalized.scale, orientation: .up)
         
         // 5. Compress
         guard let jpegData = finalImage.jpegData(compressionQuality: 0.8),
@@ -103,6 +103,20 @@ actor ShelfImageProcessor {
 extension CGRect {
     var area: CGFloat {
         return width * height
+    }
+}
+
+extension UIImage {
+    /// Rota/dibuja la imagen para que quede con orientación **.up** (único formato fiable para Vision y SwiftUI).
+    func bimboNormalizedUpOrientation() -> UIImage {
+        guard imageOrientation != .up else { return self }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
+        }
     }
 }
 #endif

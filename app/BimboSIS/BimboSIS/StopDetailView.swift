@@ -33,10 +33,12 @@ struct StopDetailView: View {
     ]
 
     @State private var showCamera = false
-    @State private var capturedImage: UIImage?
-    @State private var showImagePreview = false
-    @Environment(\.dismiss) private var dismiss
+    /// Foto del anaquel; al aceptar en el escáner se abre la preorden con esta imagen.
+    @State private var preorderShelfImage: UIImage?
     @State private var showRotateSheet = false
+    @State private var showPreorderFlow = false
+    /// Tras **Confirmar de Entregado** se habilita **Escanear anaquel** sin salir del detalle de parada.
+    @State private var deliveryConfirmed = false
     @State private var isAnalyzing = false
     /// Total piezas confirmadas en el modal (congruente con `RotateDraftLine.rotatingQty`).
     @State private var confirmedRotationPieces = 0
@@ -63,10 +65,6 @@ struct StopDetailView: View {
                     }
 
                     actionButtonsBlock
-
-                    if showImagePreview, let img = capturedImage {
-                        capturedPreview(img)
-                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 62)
@@ -85,9 +83,12 @@ struct StopDetailView: View {
         }
         .fullScreenCover(isPresented: $showCamera) {
             ShelfScannerView { image in
-                capturedImage = image
-                showImagePreview = true
-                showCamera = false
+                Task { @MainActor in
+                    preorderShelfImage = image
+                    showCamera = false
+                    await Task.yield()
+                    showPreorderFlow = true
+                }
             }
             .environmentObject(connectivity)
         }
@@ -101,6 +102,13 @@ struct StopDetailView: View {
             if isAnalyzing {
                 analysisOverlay
             }
+        }
+        .navigationDestination(isPresented: $showPreorderFlow) {
+            ConfirmarOrdenView(
+                storeName: client.name,
+                lines: ConfirmarOrdenView.previewDemoLines,
+                shelfCaptureImage: preorderShelfImage
+            )
         }
     }
 
@@ -125,7 +133,7 @@ struct StopDetailView: View {
     private var stopHeader: some View {
         ZStack(alignment: .bottom) {
             AppPalette.navy
-                .frame(height: 176)
+                .frame(height: 162)
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .ignoresSafeArea(edges: .top)
 
@@ -204,8 +212,8 @@ struct StopDetailView: View {
                 foreground: AppPalette.mutedButtonForeground,
                 trailingIcon: nil
             ) {
+                deliveryConfirmed = true
                 onComplete?()
-                dismiss()
             }
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -213,23 +221,35 @@ struct StopDetailView: View {
             )
 
             if !connectivity.isOffline {
-                primaryActionButton(
-                    title: "Escanear anaquel",
-                    icon: "camera.viewfinder",
-                    background: AppPalette.secondaryButtonFill,
-                    foreground: AppPalette.mutedButtonForeground,
-                    trailingIcon: "chevron.right"
-                ) {
-                    showCamera = true
+                VStack(alignment: .leading, spacing: 8) {
+                    if !deliveryConfirmed {
+                        Text("Confirma la entrega para habilitar el escaneo del anaquel.")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppPalette.navy.opacity(0.78))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    primaryActionButton(
+                        title: "Escanear anaquel",
+                        icon: "camera.viewfinder",
+                        background: deliveryConfirmed ? AppPalette.secondaryButtonFill : AppPalette.secondaryButtonFill.opacity(0.65),
+                        foreground: AppPalette.mutedButtonForeground,
+                        trailingIcon: "chevron.right"
+                    ) {
+                        guard deliveryConfirmed else { return }
+                        showCamera = true
+                    }
+                    .disabled(!deliveryConfirmed)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.gray.opacity(0.18), lineWidth: 1)
+                    )
                 }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.gray.opacity(0.18), lineWidth: 1)
-                )
             }
 
-            NavigationLink {
-                ConfirmarOrdenView(storeName: client.name, lines: ConfirmarOrdenView.previewDemoLines)
+            Button {
+                preorderShelfImage = nil
+                showPreorderFlow = true
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "doc.text.fill")
@@ -257,19 +277,6 @@ struct StopDetailView: View {
             )
         }
         .padding(.top, 6)
-    }
-
-    private func capturedPreview(_ img: UIImage) -> some View {
-        Image(uiImage: img)
-            .resizable()
-            .scaledToFit()
-            .frame(maxHeight: 220)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.gray.opacity(0.12), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 
     private func primaryActionButton(
